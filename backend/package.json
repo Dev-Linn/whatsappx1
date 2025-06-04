@@ -1,0 +1,50 @@
+{
+    "name": "whatsapp-gemini-chatbot",
+    "version": "1.0.0",
+    "description": "Chatbot WhatsApp com IA Gemini e sistema de memória conversacional",
+    "main": "src/index.js",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js",
+        "db": "node scripts/view-database.js",
+        "db:search": "node scripts/view-database.js search",
+        "db:history": "node scripts/view-database.js history",
+        "db:costs": "node scripts/view-database.js costs",
+        "db:export": "node scripts/view-database.js export",
+        "db:clean": "node scripts/view-database.js clean",
+        "conversations": "node scripts/view-conversations.js",
+        "conversations:search": "node scripts/view-conversations.js search",
+        "conversations:export": "node scripts/view-conversations.js export",
+        "conversations:clean": "node scripts/view-conversations.js clean",
+        "migrate": "node scripts/migrate-to-database.js",
+        "migrate:audio": "node migrate-database.js",
+        "migrate:multitenant": "node migrate-multi-tenant.js",
+        "reset": "node reset-database.js",
+        "reprocess-analyses": "node scripts/reprocess-failed-analyses.js"
+    },
+    "keywords": [
+        "whatsapp",
+        "chatbot",
+        "gemini",
+        "ai",
+        "nodejs",
+        "sqlite"
+    ],
+    "author": "Seu Nome",
+    "license": "MIT",
+    "dependencies": {
+        "@google/generative-ai": "^0.21.0",
+        "dotenv": "^16.4.5",
+        "node-fetch": "^2.7.0",
+        "qrcode-terminal": "^0.12.0",
+        "sequelize": "^6.37.3",
+        "sqlite3": "^5.1.7",
+        "whatsapp-web.js": "^1.25.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.4"
+    },
+    "engines": {
+        "node": ">=16.0.0"
+    }
+}

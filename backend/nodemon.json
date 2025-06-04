@@ -1,0 +1,15 @@
+{
+  "watch": ["src/**/*"],
+  "ignore": [
+    ".wwebjs_cache/**",
+    ".wwebjs_auth/**", 
+    "data/**",
+    "node_modules/**",
+    "*.db",
+    "*.sqlite",
+    "*.log",
+    "sessions/**"
+  ],
+  "ext": "js,json",
+  "delay": 2000
+} 

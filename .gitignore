@@ -1,0 +1,260 @@
+# ==================================
+# PROJETO WHATSAPP GEMINI INTEGRADO
+# ==================================
+
+# ===== DEPENDÊNCIAS =====
+# Node.js modules em todas as pastas
+node_modules/
+*/node_modules/
+backend/node_modules/
+frontend/node_modules/
+api/node_modules/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Lock files alternativos
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# ===== ARQUIVOS DE AMBIENTE =====
+.env
+.env.*
+!.env.example
+backend/.env
+frontend/.env
+api/.env
+
+# ===== WHATSAPP WEB.JS =====
+# Sessões e cache do WhatsApp
+.wwebjs_auth/
+.wwebjs_cache/
+backend/.wwebjs_auth/
+backend/.wwebjs_cache/
+sessions/
+*.session
+
+# ===== BANCO DE DADOS =====
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+backend/data/*.db
+backend/data/*.sqlite
+api/data/*.db
+
+# Database backups
+*.db.backup
+*.sql.backup
+
+# ===== FRONTEND (REACT + VITE) =====
+# Build outputs
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/out/
+
+# Vite
+frontend/.vite/
+
+# React
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
+
+# ===== LOGS =====
+logs/
+*.log
+backend/logs/
+frontend/logs/
+api/logs/
+
+# ===== ARQUIVOS TEMPORÁRIOS =====
+.tmp/
+temp/
+tmp/
+*.tmp
+*.temp
+
+# ===== SISTEMA OPERACIONAL =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+
+# Linux
+*~
+
+# ===== IDEs E EDITORES =====
+# VSCode
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# ===== TESTES =====
+coverage/
+*.coverage
+.nyc_output
+.coverage/
+frontend/coverage/
+backend/coverage/
+api/coverage/
+
+# ===== PRODUÇÃO E BUILD =====
+# Build outputs
+build/
+dist/
+out/
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# ===== OUTROS ARQUIVOS ESPECÍFICOS =====
+# Archives
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.tgz
+*.tar.gz
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+lib-cov/
+
+# nyc test coverage
+.nyc_output/
+
+# Grunt intermediate storage
+.grunt/
+
+# Bower dependency directory
+bower_components/
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env.test
+
+# parcel-bundler cache
+.parcel-cache/
+
+# Next.js build output
+.next/
+out/
+
+# Nuxt.js build / generate output
+.nuxt/
+dist/
+
+# Gatsby files
+.cache/
+public/
+
+# Storybook build outputs
+.out/
+.storybook-out/
+
+# Temporary folders
+.tmp/
+.temp/
+
+# ===== SEGURANÇA =====
+# Chaves e certificados
+*.pem
+*.key
+*.crt
+*.cert
+
+# ===== ESPECÍFICO DO PROJETO =====
+# Arquivos de teste e debug
+test-api-response.js
+debug-output.txt
+*.debug
+
+# Backups
+backup/
+*.backup
+
+# WhatsApp media temporários
+.wwebjs_media/
+backend/.wwebjs_media/
+
+# Arquivos de migração temporários
+*.migration.backup
+migration-*.log
+
+# Uploads temporários
+uploads/
+*/uploads/
+
+# Cache do sistema
+.cache/
+*/cache/ 
