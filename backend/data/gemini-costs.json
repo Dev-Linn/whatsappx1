@@ -1,20 +1,24 @@
 {
-  "totalCost": 0.051166087500000026,
-  "totalRequests": 99,
+  "totalCost": 0.05271255000000003,
+  "totalRequests": 107,
   "dailyCosts": {
     "03/06/2025": {
       "cost": 0.044016225000000006,
       "requests": 80
     },
     "04/06/2025": {
-      "cost": 0.0071498625,
-      "requests": 19
+      "cost": 0.007886174999999999,
+      "requests": 23
+    },
+    "05/06/2025": {
+      "cost": 0.0008101499999999999,
+      "requests": 4
     }
   },
   "monthlyCosts": {
     "06/2025": {
-      "cost": 0.051166087500000026,
-      "requests": 99
+      "cost": 0.05271255000000003,
+      "requests": 107
     }
   },
   "requests": [
@@ -1205,6 +1209,102 @@
       "costBRL": 0.0003696,
       "inputLength": 2638,
       "outputLength": 236
+    },
+    {
+      "timestamp": "2025-06-05T02:42:56.064Z",
+      "date": "04/06/2025",
+      "time": "23:42:56",
+      "inputTokens": 547,
+      "outputTokens": 40,
+      "totalTokens": 587,
+      "costUSD": 0.000053025,
+      "costBRL": 0.00029163750000000003,
+      "inputLength": 2186,
+      "outputLength": 157
+    },
+    {
+      "timestamp": "2025-06-05T02:47:23.622Z",
+      "date": "04/06/2025",
+      "time": "23:47:23",
+      "inputTokens": 15,
+      "outputTokens": 10,
+      "totalTokens": 25,
+      "costUSD": 0.000004125,
+      "costBRL": 0.000022687500000000003,
+      "inputLength": 57,
+      "outputLength": 37
+    },
+    {
+      "timestamp": "2025-06-05T02:52:42.200Z",
+      "date": "04/06/2025",
+      "time": "23:52:42",
+      "inputTokens": 233,
+      "outputTokens": 49,
+      "totalTokens": 282,
+      "costUSD": 0.000032174999999999996,
+      "costBRL": 0.00017696249999999997,
+      "inputLength": 929,
+      "outputLength": 196
+    },
+    {
+      "timestamp": "2025-06-05T02:58:54.949Z",
+      "date": "04/06/2025",
+      "time": "23:58:54",
+      "inputTokens": 306,
+      "outputTokens": 72,
+      "totalTokens": 378,
+      "costUSD": 0.00004455,
+      "costBRL": 0.000245025,
+      "inputLength": 1222,
+      "outputLength": 288
+    },
+    {
+      "timestamp": "2025-06-05T03:00:51.348Z",
+      "date": "05/06/2025",
+      "time": "00:00:51",
+      "inputTokens": 403,
+      "outputTokens": 57,
+      "totalTokens": 460,
+      "costUSD": 0.000047325,
+      "costBRL": 0.0002602875,
+      "inputLength": 1612,
+      "outputLength": 227
+    },
+    {
+      "timestamp": "2025-06-05T03:06:06.652Z",
+      "date": "05/06/2025",
+      "time": "00:06:06",
+      "inputTokens": 497,
+      "outputTokens": 7,
+      "totalTokens": 504,
+      "costUSD": 0.000039374999999999995,
+      "costBRL": 0.00021656249999999996,
+      "inputLength": 1986,
+      "outputLength": 26
+    },
+    {
+      "timestamp": "2025-06-05T03:22:36.309Z",
+      "date": "05/06/2025",
+      "time": "00:22:36",
+      "inputTokens": 236,
+      "outputTokens": 6,
+      "totalTokens": 242,
+      "costUSD": 0.0000195,
+      "costBRL": 0.00010725,
+      "inputLength": 941,
+      "outputLength": 24
+    },
+    {
+      "timestamp": "2025-06-05T03:23:17.060Z",
+      "date": "05/06/2025",
+      "time": "00:23:17",
+      "inputTokens": 520,
+      "outputTokens": 7,
+      "totalTokens": 527,
+      "costUSD": 0.000041099999999999996,
+      "costBRL": 0.00022605,
+      "inputLength": 2080,
+      "outputLength": 27
     }
   ]
 }

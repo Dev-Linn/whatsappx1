@@ -203,6 +203,9 @@ class WhatsAppInstance {
             this.lastQrCodeTime = null;
             this.lastHealthCheck = Date.now();
             
+            // Marcar tenant como conectado no banco
+            await updateTenantConnectionStatus(this.tenantId, true);
+            
             await this.updateStatus({
                 connected: true,
                 authenticated: true,
@@ -255,6 +258,9 @@ class WhatsAppInstance {
             console.log(`🔌 [Tenant ${this.tenantId}] Cliente desconectado:`, reason);
             this.isInitializing = false;
             this.lastQrCode = null;
+            
+            // Marcar tenant como desconectado no banco
+            await updateTenantConnectionStatus(this.tenantId, false);
             
             await this.updateStatus({
                 connected: false,
@@ -833,6 +839,9 @@ class WhatsAppInstance {
             this.lastHealthCheck = Date.now();
             this.connectionLostTime = null;
             
+            // Marcar tenant como desconectado no banco
+            await updateTenantConnectionStatus(this.tenantId, false);
+            
             await this.updateStatus({
                 message: '🔴 Desconectado! Clique em "Reconectar" para escanear um novo QR Code',
                 connected: false,
@@ -1045,35 +1054,38 @@ async function getDefaultTenantId() {
 // Função para buscar prompt personalizado do tenant
 async function getTenantPrompt(tenantId) {
     try {
-        // Buscar informações do tenant primeiro para obter dados necessários
-        const tenantInfo = await getTenantInfo(tenantId);
-        if (!tenantInfo) {
-            throw new Error(`Tenant ${tenantId} não encontrado`);
-        }
-
-        // Buscar prompt do tenant na API
-        const promptResponse = await fetch(`${API_BASE}/api/v1/prompts`, {
+        const response = await fetch(`${API_BASE}/api/v1/prompts`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-                // Adicionar tenant_id no header para bypass da autenticação para o backend
                 'X-Tenant-ID': tenantId.toString()
             }
         });
-
-        if (promptResponse.ok) {
-            const promptResult = await promptResponse.json();
-            if (promptResult.success && promptResult.data && promptResult.data.base_prompt) {
-                console.log(`✅ [Tenant ${tenantId}] Prompt ${promptResult.data.is_default ? 'padrão' : 'personalizado'} carregado`);
-                return promptResult.data.base_prompt;
-            }
-        }
         
-        throw new Error('Erro ao buscar prompt da API');
+        if (response.ok) {
+            const data = await response.json();
+            console.log(`✅ [Tenant ${tenantId}] Prompt e modelo carregados:`, {
+                prompt_length: data.data.base_prompt?.length || 0,
+                ai_model: data.data.ai_model || 'gemini-1.5-flash'
+            });
+            
+            return {
+                prompt: data.data.base_prompt || 'Você é um assistente útil.',
+                ai_model: data.data.ai_model || 'gemini-1.5-flash'
+            };
+        } else {
+            console.log(`⚠️ [Tenant ${tenantId}] Erro ao buscar prompt da API, usando padrão`);
+            return {
+                prompt: 'Você é um assistente útil.',
+                ai_model: 'gemini-1.5-flash'
+            };
+        }
     } catch (error) {
-        console.error(`❌ [Tenant ${tenantId}] Erro ao buscar prompt:`, error.message);
-        // Se falhar completamente, usar um prompt mínimo de emergência
-        return `Você é uma assistente virtual que ajuda os clientes de forma educada e profissional. Responda de forma clara e objetiva.`;
+        console.error(`❌ [Tenant ${tenantId}] Erro ao conectar com API:`, error.message);
+        return {
+            prompt: 'Você é um assistente útil.',
+            ai_model: 'gemini-1.5-flash'
+        };
     }
 }
 
@@ -1207,7 +1219,13 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
         }
         
         // Monta o prompt completo
-        const fullPrompt = await getTenantPrompt(tenantId) + contextText + `\nCliente: ${combinedMessage}\n\nVocê:`;
+        const tenantData = await getTenantPrompt(tenantId);
+        const fullPrompt = tenantData.prompt + contextText + `\nCliente: ${combinedMessage}\n\nVocê:`;
+        
+        console.log(`🧠 [DEBUG] Usando modelo AI: ${tenantData.ai_model} para tenant ${tenantId}`);
+        
+        // Criar modelo dinâmico baseado na configuração do tenant
+        const tenantModel = genAI.getGenerativeModel({ model: tenantData.ai_model });
         
         let result;
         if (hasAudio && audioData) {
@@ -1224,10 +1242,10 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
                 }
             ];
             
-            result = await model.generateContent(parts);
+            result = await tenantModel.generateContent(parts);
         } else {
             // Só texto
-            result = await model.generateContent(fullPrompt);
+            result = await tenantModel.generateContent(fullPrompt);
         }
         
         const response = await result.response;
@@ -1258,8 +1276,12 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
                 const messagesForAnalysis = await database.getMessagesForAnalysis(user.id, 20);
                 
                 if (messagesForAnalysis.length > 0) {
-                    // Executar análise
-                    const analysis = await sentimentAnalyzer.analyzeConversation(messagesForAnalysis, userName);
+                    // Executar análise usando o mesmo modelo do tenant
+                    const analysis = await sentimentAnalyzer.analyzeConversation(
+                        messagesForAnalysis, 
+                        userName, 
+                        tenantData.ai_model
+                    );
                     
                     // Atualizar banco com os resultados
                     await database.updateAnalysis(
@@ -1269,7 +1291,7 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
                         analysis.stage
                     );
                     
-                    console.log(`📊 Análise: ${analysis.sentiment} | ${analysis.stage}`);
+                    console.log(`📊 Análise com ${tenantData.ai_model}: ${analysis.sentiment} | ${analysis.stage}`);
                 }
             } catch (analysisError) {
                 console.error('❌ Erro na análise automática:', analysisError.message);
@@ -1401,10 +1423,12 @@ console.log('');
 database.initialize().then((success) => {
     if (success) {
         console.log('📊 Sistema de banco de dados pronto!');
-        console.log('💡 Instâncias WhatsApp serão criadas sob demanda quando necessário');
+        console.log('🔄 Inicializando instâncias WhatsApp que estavam conectadas...');
         
-        // Não inicializar automaticamente todos os tenants
-        // initializeExistingTenants(); // REMOVIDO
+        // Inicializar automaticamente instâncias que estavam conectadas
+        setTimeout(() => {
+            initializeExistingTenants();
+        }, 3000); // Aguarda 3 segundos para o sistema estabilizar
         
     } else {
         console.error('❌ Falha ao inicializar banco de dados');
@@ -1579,12 +1603,33 @@ httpApp.listen(3002, () => {
     console.log('   • GET  http://localhost:3002/status - Status de todas as instâncias');
 });
 
-// Função para inicializar automaticamente instâncias de tenants existentes
+// Função para marcar tenant como conectado no banco
+async function updateTenantConnectionStatus(tenantId, connected) {
+    try {
+        const response = await fetch(`${API_BASE}/api/v1/tenants/${tenantId}/connection-status`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ whatsapp_connected: connected })
+        });
+        
+        if (response.ok) {
+            console.log(`✅ [Tenant ${tenantId}] Status de conexão atualizado no banco: ${connected}`);
+        } else {
+            console.log(`⚠️ [Tenant ${tenantId}] Não foi possível atualizar status no banco`);
+        }
+    } catch (error) {
+        console.log(`⚠️ [Tenant ${tenantId}] Erro ao atualizar status no banco:`, error.message);
+    }
+}
+
+// Função para inicializar automaticamente instâncias de tenants que estavam conectados
 async function initializeExistingTenants() {
     try {
-        console.log('🔍 Buscando tenants existentes para inicializar...');
+        console.log('🔍 Buscando tenants que estavam conectados para reinicializar...');
         
-        const response = await fetch(`${API_BASE}/api/v1/tenants/all`, {
+        const response = await fetch(`${API_BASE}/api/v1/tenants/connected`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -1593,33 +1638,46 @@ async function initializeExistingTenants() {
         
         if (response.ok) {
             const result = await response.json();
-            const tenants = result.data || [];
+            const connectedTenants = result.data || [];
             
-            console.log(`📋 Encontrados ${tenants.length} tenants para inicializar`);
+            if (connectedTenants.length === 0) {
+                console.log('📝 Nenhum tenant estava conectado anteriormente');
+                return;
+            }
+            
+            console.log(`📋 Encontrados ${connectedTenants.length} tenants conectados para reinicializar:`);
+            connectedTenants.forEach(tenant => {
+                console.log(`   • Tenant ${tenant.id}: ${tenant.company_name}`);
+            });
             
             // Inicializar instâncias COM DELAY para evitar conflitos
-            for (let i = 0; i < tenants.length; i++) {
-                const tenant = tenants[i];
+            for (let i = 0; i < connectedTenants.length; i++) {
+                const tenant = connectedTenants[i];
                 
                 try {
-                    console.log(`🆕 Inicializando tenant ${tenant.id} (${tenant.company_name})`);
-                    await getOrCreateInstance(tenant.id);
+                    console.log(`🔄 [${i+1}/${connectedTenants.length}] Reinicializando tenant ${tenant.id} (${tenant.company_name})`);
+                    const instance = await getOrCreateInstance(tenant.id);
                     
-                    // DELAY entre inicializações para evitar conflitos do Puppeteer
-                    if (i < tenants.length - 1) {
-                        console.log(`⏳ Aguardando 3s antes da próxima inicialização...`);
-                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    // DELAY entre inicializações para evitar conflitos
+                    if (i < connectedTenants.length - 1) {
+                        console.log(`⏳ Aguardando 0,2s antes da próxima inicialização...`);
+                        await new Promise(resolve => setTimeout(resolve, 200));
                     }
                 } catch (instanceError) {
-                    console.error(`❌ Erro ao inicializar tenant ${tenant.id}:`, instanceError.message);
+                    console.error(`❌ Erro ao reinicializar tenant ${tenant.id}:`, instanceError.message);
+                    // Marcar como desconectado se falhar
+                    await updateTenantConnectionStatus(tenant.id, false);
                     // Continua com o próximo tenant mesmo se um falhar
                 }
             }
             
-            console.log(`✅ Processo de inicialização concluído!`);
+            console.log(`✅ Processo de reinicialização automática concluído!`);
+        } else {
+            console.log('⚠️ Não foi possível buscar tenants conectados - endpoint pode não existir ainda');
+            console.log('💡 Instâncias serão criadas conforme demanda');
         }
     } catch (error) {
-        console.log('⚠️ Não foi possível buscar tenants existentes:', error.message);
+        console.log('⚠️ Não foi possível buscar tenants conectados:', error.message);
         console.log('💡 Instâncias serão criadas conforme demanda');
     }
 }

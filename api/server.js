@@ -501,6 +501,25 @@ async function startServer() {
             }
         });
 
+        // Rota para buscar tenants conectados (para reinicialização automática)
+        app.get('/api/v1/tenants/connected', async (req, res) => {
+            try {
+                const connectedTenants = await db.Tenant.findAll({
+                    where: { 
+                        whatsapp_connected: true,
+                        status: 'active'
+                    },
+                    order: [['created_at', 'ASC']],
+                    attributes: ['id', 'company_name', 'email', 'whatsapp_connected', 'status']
+                });
+                
+                res.success(connectedTenants, 'Tenants conectados encontrados');
+            } catch (error) {
+                console.error('❌ Erro ao buscar tenants conectados:', error);
+                res.error('Erro ao buscar tenants conectados', error.message);
+            }
+        });
+
         // Rota para buscar tenant específico por ID
         app.get('/api/v1/tenants/:id', async (req, res) => {
             try {
@@ -517,6 +536,28 @@ async function startServer() {
             } catch (error) {
                 console.error('❌ Erro ao buscar tenant:', error);
                 res.error('Erro ao buscar tenant', error.message);
+            }
+        });
+
+        // Rota para atualizar status de conexão do tenant
+        app.put('/api/v1/tenants/:id/connection-status', async (req, res) => {
+            try {
+                const { id } = req.params;
+                const { whatsapp_connected } = req.body;
+                
+                const tenant = await db.Tenant.findByPk(id);
+                
+                if (!tenant) {
+                    return res.error('Tenant não encontrado', 404);
+                }
+                
+                await tenant.update({ whatsapp_connected: !!whatsapp_connected });
+                
+                console.log(`🔄 Status de conexão do tenant ${id} atualizado para: ${whatsapp_connected}`);
+                res.success({ whatsapp_connected: !!whatsapp_connected }, 'Status de conexão atualizado');
+            } catch (error) {
+                console.error('❌ Erro ao atualizar status de conexão:', error);
+                res.error('Erro ao atualizar status de conexão', error.message);
             }
         });
         

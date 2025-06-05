@@ -2,10 +2,9 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 class SentimentAnalyzer {
-    constructor(apiKey) {
+    constructor(apiKey, defaultModel = "gemini-1.5-flash") {
         this.genAI = new GoogleGenerativeAI(apiKey);
-        // Mudar para gemini-1.5-flash que tem limites maiores
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        this.defaultModel = defaultModel;
         
         // Prompt otimizado e mais conciso
         this.analysisPrompt = `Analise esta conversa de vendas e retorne APENAS um JSON válido:
@@ -31,7 +30,7 @@ CONVERSA:
     }
 
     // Analisar conversa e retornar sentimento, observações e stage
-    async analyzeConversation(messages, userName) {
+    async analyzeConversation(messages, userName, modelName = null) {
         try {
             if (!messages || messages.length === 0) {
                 return {
@@ -40,6 +39,12 @@ CONVERSA:
                     stage: 'lead_frio'
                 };
             }
+
+            // Usar modelo específico ou padrão
+            const selectedModel = modelName || this.defaultModel;
+            const model = this.genAI.getGenerativeModel({ model: selectedModel });
+            
+            console.log(`🧠 [DEBUG] Análise de sentimento usando modelo: ${selectedModel}`);
 
             // Formatar mensagens de forma mais concisa (últimas 20 apenas)
             const recentMessages = messages.slice(-20);
@@ -61,7 +66,7 @@ CONVERSA:
             console.log(`📏 Tamanho do prompt: ${fullPrompt.length} caracteres`);
             
             // Fazer requisição para Gemini
-            const result = await this.model.generateContent(fullPrompt);
+            const result = await model.generateContent(fullPrompt);
             const response = await result.response;
             const text = response.text().trim();
 

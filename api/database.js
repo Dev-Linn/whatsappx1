@@ -117,6 +117,7 @@ const TenantPrompt = sequelize.define('tenant_prompts', {
     base_prompt: { type: DataTypes.TEXT, allowNull: false },
     clarification_prompt: { type: DataTypes.TEXT, allowNull: true },
     qualification_prompt: { type: DataTypes.TEXT, allowNull: true },
+    ai_model: { type: DataTypes.STRING(100), allowNull: false, defaultValue: 'gemini-1.5-flash' },
     is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
     last_updated: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
 });
@@ -928,6 +929,7 @@ class ApiDatabase {
                     base_prompt: prompt.base_prompt,
                     clarification_prompt: prompt.clarification_prompt,
                     qualification_prompt: prompt.qualification_prompt,
+                    ai_model: prompt.ai_model || 'gemini-1.5-flash',
                     is_active: prompt.is_active,
                     last_updated: prompt.last_updated,
                     is_default: false
@@ -977,6 +979,7 @@ class ApiDatabase {
                     base_prompt: defaultPromptText,
                     clarification_prompt: 'Peça esclarecimento de forma natural: "Não entendi bem. Pode me explicar melhor?" ou "Como assim? Me conta mais detalhes"',
                     qualification_prompt: 'Identifique se a pessoa tem interesse real em comprar receitas para vender doces ou apenas curiosidade.',
+                    ai_model: 'gemini-1.5-flash',
                     is_active: true,
                     last_updated: new Date()
                 });
@@ -987,6 +990,7 @@ class ApiDatabase {
                     base_prompt: defaultPromptText,
                     clarification_prompt: 'Peça esclarecimento de forma natural: "Não entendi bem. Pode me explicar melhor?" ou "Como assim? Me conta mais detalhes"',
                     qualification_prompt: 'Identifique se a pessoa tem interesse real em comprar receitas para vender doces ou apenas curiosidade.',
+                    ai_model: 'gemini-1.5-flash',
                     is_active: true,
                     last_updated: new Date()
                 });
@@ -997,6 +1001,7 @@ class ApiDatabase {
                 base_prompt: prompt.base_prompt,
                 clarification_prompt: prompt.clarification_prompt,
                 qualification_prompt: prompt.qualification_prompt,
+                ai_model: prompt.ai_model || 'gemini-1.5-flash',
                 is_active: prompt.is_active,
                 last_updated: prompt.last_updated,
                 is_default: true
@@ -1009,12 +1014,23 @@ class ApiDatabase {
 
     async updateTenantPrompt(tenantId, promptData) {
         try {
-            const { base_prompt, clarification_prompt, qualification_prompt } = promptData;
+            const { base_prompt, clarification_prompt, qualification_prompt, ai_model } = promptData;
 
             // Validar que o prompt base existe
             if (!base_prompt || base_prompt.trim().length === 0) {
                 throw new Error('Prompt base é obrigatório');
             }
+
+            // Validar modelo AI
+            const validModels = [
+                'gemini-1.5-flash',
+                'gemini-1.5-pro',
+                'gemini-2.0-flash',
+                'gemini-2.5-pro-preview-05-06',
+                'gemini-2.5-flash-preview-04-17'
+            ];
+            
+            const modelToUse = ai_model && validModels.includes(ai_model) ? ai_model : 'gemini-1.5-flash';
 
             // Verificar se já existe um prompt para este tenant
             const existingPrompt = await this.TenantPrompt.findOne({
@@ -1028,6 +1044,7 @@ class ApiDatabase {
                     base_prompt: base_prompt.trim(),
                     clarification_prompt: clarification_prompt ? clarification_prompt.trim() : null,
                     qualification_prompt: qualification_prompt ? qualification_prompt.trim() : null,
+                    ai_model: modelToUse,
                     last_updated: new Date(),
                     is_active: true
                 });
@@ -1038,6 +1055,7 @@ class ApiDatabase {
                     base_prompt: base_prompt.trim(),
                     clarification_prompt: clarification_prompt ? clarification_prompt.trim() : null,
                     qualification_prompt: qualification_prompt ? qualification_prompt.trim() : null,
+                    ai_model: modelToUse,
                     is_active: true,
                     last_updated: new Date()
                 });
@@ -1048,6 +1066,7 @@ class ApiDatabase {
                 base_prompt: prompt.base_prompt,
                 clarification_prompt: prompt.clarification_prompt,
                 qualification_prompt: prompt.qualification_prompt,
+                ai_model: prompt.ai_model,
                 is_active: prompt.is_active,
                 last_updated: prompt.last_updated
             };

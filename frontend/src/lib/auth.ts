@@ -112,6 +112,18 @@ export const apiCall = async (endpoint: string, options: RequestInit = {}) => {
   const data = await response.json();
   
   if (!response.ok) {
+    // Se tenant não encontrado (404), redirecionar para login
+    if (response.status === 404 && (
+      data.error?.includes('Tenant não encontrado') ||
+      data.error?.includes('Tenant not found') ||
+      endpoint.includes('/auth/me')
+    )) {
+      console.log('🔄 Tenant não encontrado - redirecionando para login...');
+      removeToken();
+      window.location.href = '/login';
+      throw new Error('Tenant não encontrado');
+    }
+    
     throw new Error(data.error || 'Erro na API');
   }
   

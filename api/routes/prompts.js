@@ -64,7 +64,7 @@ module.exports = (db) => {
     router.put('/', authenticateBackendOrToken, async (req, res) => {
         try {
             const tenantId = req.tenant.id;
-            const { base_prompt, clarification_prompt, qualification_prompt } = req.body;
+            const { base_prompt, clarification_prompt, qualification_prompt, ai_model } = req.body;
 
             // Validações
             if (!base_prompt || base_prompt.trim().length === 0) {
@@ -83,10 +83,28 @@ module.exports = (db) => {
                 });
             }
 
+            // Validar modelo AI se fornecido
+            const validModels = [
+                'gemini-1.5-flash',
+                'gemini-1.5-pro',
+                'gemini-2.0-flash',
+                'gemini-2.5-pro-preview-05-06',
+                'gemini-2.5-flash-preview-04-17'
+            ];
+
+            if (ai_model && !validModels.includes(ai_model)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Modelo AI inválido',
+                    details: `Modelos válidos: ${validModels.join(', ')}`
+                });
+            }
+
             const updatedPrompt = await db.updateTenantPrompt(tenantId, {
                 base_prompt,
                 clarification_prompt,
-                qualification_prompt
+                qualification_prompt,
+                ai_model
             });
 
             res.json({
@@ -140,6 +158,13 @@ module.exports = (db) => {
                 });
             }
 
+            // Buscar dados do tenant para obter o modelo AI configurado
+            const tenantId = req.tenant.id;
+            const tenantPrompt = await db.getTenantPrompt(tenantId);
+            const modelToUse = req.body.ai_model || tenantPrompt.ai_model || 'gemini-1.5-flash';
+            
+            console.log(`🧠 [DEBUG] Usando modelo AI: ${modelToUse} para tenant ${tenantId}`);
+
             // Montar prompt final como seria usado na conversa
             const fullPrompt = `${base_prompt}\n\nCliente: ${test_message}\n\nVocê:`;
 
@@ -151,21 +176,23 @@ module.exports = (db) => {
                 // Importar e configurar Gemini para teste
                 const { GoogleGenerativeAI } = require('@google/generative-ai');
                 
-                if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'sua_chave_api_aqui') {
+                if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY) {
                     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-                    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                    const model = genAI.getGenerativeModel({ model: modelToUse });
+                    
+                    console.log(`🧠 [DEBUG] Executando teste com modelo: ${modelToUse}`);
                     
                     const result = await model.generateContent(fullPrompt);
                     const response = await result.response;
                     aiResponse = response.text();
                     testSuccess = true;
                     
-                    console.log(`✅ Teste de prompt realizado com sucesso para tenant ${req.tenant.id}`);
+                    console.log(`✅ Teste de prompt realizado com sucesso para tenant ${req.tenant.id} usando modelo ${modelToUse}`);
                 } else {
                     aiResponse = "⚠️ Chave API do Gemini não configurada - não é possível testar a resposta real";
                 }
             } catch (geminiError) {
-                console.error('❌ Erro ao testar com Gemini:', geminiError.message);
+                console.error(`❌ Erro ao testar com Gemini (${modelToUse}):`, geminiError.message);
                 aiResponse = `❌ Erro ao testar com IA: ${geminiError.message}`;
             }
 
@@ -176,6 +203,7 @@ module.exports = (db) => {
                     preview: fullPrompt,
                     aiResponse: aiResponse,
                     testSuccess: testSuccess,
+                    modelUsed: modelToUse,
                     stats: {
                         characters: fullPrompt.length,
                         estimated_tokens: Math.ceil(fullPrompt.length / 4),
@@ -186,6 +214,68 @@ module.exports = (db) => {
 
         } catch (error) {
             console.error('❌ Erro ao testar prompt:', error);
+            res.status(500).json({
+                success: false,
+                error: 'Erro interno do servidor',
+                details: error.message
+            });
+        }
+    });
+
+    // GET /prompts/models - Listar modelos AI disponíveis
+    router.get('/models', authenticateBackendOrToken, async (req, res) => {
+        try {
+            const models = [
+                {
+                    id: 'gemini-1.5-flash',
+                    name: 'Gemini 1.5 Flash',
+                    description: 'Modelo rápido e eficiente para conversas cotidianas',
+                    available: true,
+                    recommended: true,
+                    features: ['Resposta rápida', 'Custo baixo', 'Boa qualidade']
+                },
+                {
+                    id: 'gemini-1.5-pro',
+                    name: 'Gemini 1.5 Pro',
+                    description: 'Modelo avançado com melhor compreensão e raciocínio',
+                    available: true,
+                    recommended: false,
+                    features: ['Alta qualidade', 'Raciocínio complexo', 'Melhor contexto']
+                },
+                {
+                    id: 'gemini-2.0-flash',
+                    name: 'Gemini 2.0 Flash',
+                    description: 'Nova geração ultra-rápida com melhor precisão',
+                    available: false,
+                    recommended: false,
+                    features: ['Velocidade extrema', 'Precisão melhorada', 'Em breve']
+                },
+                {
+                    id: 'gemini-2.5-pro-preview-05-06',
+                    name: 'Gemini 2.5 Pro Preview',
+                    description: 'Versão prévia do modelo mais avançado da Google',
+                    available: false,
+                    recommended: false,
+                    features: ['Máxima qualidade', 'Funcionalidades avançadas', 'Em breve']
+                },
+                {
+                    id: 'gemini-2.5-flash-preview-04-17',
+                    name: 'Gemini 2.5 Flash Preview',
+                    description: 'Preview da nova versão Flash com melhorias significativas',
+                    available: false,
+                    recommended: false,
+                    features: ['Velocidade melhorada', 'Precisão aprimorada', 'Em breve']
+                }
+            ];
+
+            res.json({
+                success: true,
+                message: 'Modelos AI disponíveis',
+                data: models
+            });
+
+        } catch (error) {
+            console.error('❌ Erro ao listar modelos:', error);
             res.status(500).json({
                 success: false,
                 error: 'Erro interno do servidor',

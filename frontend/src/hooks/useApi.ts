@@ -125,3 +125,21 @@ export const apiPut = async <T>(endpoint: string, body: any): Promise<ApiRespons
     };
   }
 };
+
+export const apiGet = async <T>(endpoint: string): Promise<ApiResponse<T>> => {
+  try {
+    console.log(`🔄 GET autenticado para: ${endpoint}`);
+    const result = await apiCall(endpoint, {
+      method: 'GET',
+    });
+    console.log(`✅ GET response:`, result);
+    return result;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro de conexão';
+    console.error('❌ Erro GET:', errorMessage);
+    return {
+      success: false,
+      error: errorMessage,
+    };
+  }
+};
