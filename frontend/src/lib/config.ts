@@ -8,7 +8,12 @@ const getApiUrl = () => {
     return '';  // Usa proxy do Vite (/api -> localhost:3001/api)
   }
   
-  // Se estiver em produção (qualquer outro hostname), usar o mesmo hostname na porta 3001
+  // Se estiver em produção com nginx + SSL, usar proxy nginx
+  if (hostname === 'lucrogourmet.shop' || hostname.includes('lucrogourmet.shop')) {
+    return '';  // Usa proxy do nginx (/api -> localhost:3001/api)
+  }
+  
+  // Para outros casos (IP direto), usar porta 3001
   return `${protocol}//${hostname}:3001`;
 };
 
