@@ -1,0 +1,54 @@
+{
+  "name": "whatsapp-dashboard-integrado",
+  "version": "1.0.0",
+  "description": "Sistema integrado: WhatsApp Chatbot + API + Dashboard Frontend",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:api\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:api": "cd api && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:api\" \"npm run dev:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:api": "cd api && npm start",
+    "start:frontend": "cd frontend && npm run dev",
+    "install:all": "npm install && cd backend && npm install && cd ../api && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "preview:frontend": "cd frontend && npm run preview",
+    "db": "cd backend && npm run db",
+    "db:search": "cd backend && npm run db:search",
+    "db:history": "cd backend && npm run db:history",
+    "db:costs": "cd backend && npm run db:costs",
+    "db:export": "cd backend && npm run db:export",
+    "db:clean": "cd backend && npm run db:clean",
+    "db:reset": "cd api && node reset-everything.js",
+    "conversations": "cd backend && npm run conversations",
+    "conversations:search": "cd backend && npm run conversations:search",
+    "conversations:export": "cd backend && npm run conversations:export",
+    "conversations:clean": "cd backend && npm run conversations:clean",
+    "migrate": "cd backend && npm run migrate",
+    "reset": "cd backend && npm run reset"
+  },
+  "keywords": [
+    "whatsapp",
+    "chatbot",
+    "gemini",
+    "ai",
+    "dashboard",
+    "react",
+    "nodejs",
+    "sqlite",
+    "integrated"
+  ],
+  "author": "Seu Nome",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "workspaces": [
+    "backend",
+    "api", 
+    "frontend"
+  ]
+}
