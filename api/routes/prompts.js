@@ -148,28 +148,27 @@ module.exports = (db) => {
     // POST /prompts/test - Testar prompt (preview)
     router.post('/test', authenticateBackendOrToken, async (req, res) => {
         try {
-            const { base_prompt, test_message = "Oi, tudo bem?" } = req.body;
+            const { test_message = "Oi, tudo bem?" } = req.body;
 
-            if (!base_prompt || base_prompt.trim().length === 0) {
+            // Buscar dados do tenant para obter o prompt e modelo AI configurados
+            const tenantId = req.tenant.id;
+            const tenantPrompt = await db.getTenantPrompt(tenantId);
+            
+            if (!tenantPrompt || !tenantPrompt.base_prompt) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Prompt base é obrigatório para teste',
-                    details: 'Forneça um prompt base para testar'
+                    error: 'Prompt não encontrado',
+                    details: 'Configure um prompt antes de testar'
                 });
             }
 
-            // Buscar dados do tenant para obter o modelo AI configurado
-            const tenantId = req.tenant.id;
-            const tenantPrompt = await db.getTenantPrompt(tenantId);
             const modelToUse = req.body.ai_model || tenantPrompt.ai_model || 'gemini-1.5-flash';
             
             console.log(`🧠 [DEBUG] Usando modelo AI: ${modelToUse} para tenant ${tenantId}`);
-
-            // Usar o prompt salvo no banco de dados, não o do corpo da requisição
-            const promptToUse = base_prompt || tenantPrompt.base_prompt || 'Você é um assistente útil.';
+            console.log(`🧠 [DEBUG] Prompt do tenant: ${tenantPrompt.base_prompt.substring(0, 100)}...`);
             
-            // Montar prompt final como seria usado na conversa
-            const fullPrompt = `${promptToUse}\n\nCliente: ${test_message}\n\nVocê:`;
+            // Montar prompt final como seria usado na conversa (usando sempre o prompt salvo)
+            const fullPrompt = `${tenantPrompt.base_prompt}\n\nCliente: ${test_message}\n\nVocê:`;
 
             // Testar com Gemini (se a chave API estiver disponível)
             let aiResponse = null;
