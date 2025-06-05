@@ -93,7 +93,7 @@ io.use(async (socket, next) => {
 });
 
 io.on('connection', (socket) => {
-    console.log(`🔌 Cliente conectado: ${socket.id} (Tenant: ${socket.tenantId})`);
+    // console.log(`🔌 Cliente conectado: ${socket.id} (Tenant: ${socket.tenantId})`);
     
     // Entrar na room do tenant
     socket.join(`tenant_${socket.tenantId}`);
@@ -103,7 +103,7 @@ io.on('connection', (socket) => {
     socket.emit('whatsapp-status', tenantStatus);
     
     socket.on('disconnect', () => {
-        console.log(`🔌 Cliente desconectado: ${socket.id}`);
+        // console.log(`🔌 Cliente desconectado: ${socket.id}`);
     });
 });
 
@@ -177,7 +177,7 @@ const updateWhatsAppStatus = (tenantId, status) => {
         currentStatus.message !== newStatus.message;
     
     if (hasSignificantChange) {
-        console.log(`🔄 [Tenant ${tenantId}] Status: ${newStatus.message}`);
+        // console.log(`🔄 [Tenant ${tenantId}] Status: ${newStatus.message}`);
         
         // Log do evento no sistema de monitoramento (se disponível)
         if (global.logger) {
@@ -401,7 +401,7 @@ async function startServer() {
                 
                 if (initResponse.ok) {
                     const result = await initResponse.json();
-                    console.log(`✅ Instância WhatsApp inicializada para tenant ${tenantId} por usuário ${userId}`);
+                    // console.log(`✅ Instância WhatsApp inicializada para tenant ${tenantId} por usuário ${userId}`);
                     res.success(null, 'Instância WhatsApp inicializada com sucesso');
                 } else {
                     console.error(`❌ Erro ao inicializar instância para tenant ${tenantId}:`, initResponse.status);
@@ -462,7 +462,7 @@ async function startServer() {
                     
                     if (backendResponse.ok) {
                         const result = await backendResponse.json();
-                        console.log(`✅ Comando de restart enviado ao backend para tenant ${tenantId}:`, result.message);
+                        // console.log(`✅ Comando de restart enviado ao backend para tenant ${tenantId}:`, result.message);
                         res.success(null, 'Restart iniciado com sucesso');
                     } else {
                         console.error(`❌ Backend retornou erro no restart para tenant ${tenantId}:`, backendResponse.status);
@@ -503,7 +503,7 @@ async function startServer() {
                     
                     if (backendResponse.ok) {
                         const result = await backendResponse.json();
-                        console.log(`✅ Comando de logout enviado ao backend para tenant ${tenantId}:`, result.message);
+                        // console.log(`✅ Comando de logout enviado ao backend para tenant ${tenantId}:`, result.message);
                         res.success(null, 'Logout realizado com sucesso');
                     } else {
                         console.error(`❌ Backend retornou erro no logout para tenant ${tenantId}:`, backendResponse.status);
@@ -605,7 +605,7 @@ async function startServer() {
                 
                 await tenant.update({ whatsapp_connected: !!whatsapp_connected });
                 
-                console.log(`🔄 Status de conexão do tenant ${id} atualizado para: ${whatsapp_connected}`);
+                // console.log(`🔄 Status de conexão do tenant ${id} atualizado para: ${whatsapp_connected}`);
                 res.success({ whatsapp_connected: !!whatsapp_connected }, 'Status de conexão atualizado');
             } catch (error) {
                 console.error('❌ Erro ao atualizar status de conexão:', error);
@@ -656,8 +656,8 @@ async function startServer() {
         server.listen(PORT, '0.0.0.0', () => {
             console.log('✅ API REST iniciada com sucesso!');
             console.log(`📡 Servidor rodando em: http://localhost:${PORT}`);
-            console.log(`📡 Acessível na rede em: http://192.168.1.17:${PORT}`);
-            console.log('');
+            // console.log(`📡 Acessível na rede em: http://192.168.1.17:${PORT}`);
+            // console.log('');
             console.log('📈 Monitoramento em tempo real ativo!');
         });
         

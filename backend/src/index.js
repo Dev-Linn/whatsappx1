@@ -55,16 +55,16 @@ class WhatsAppInstance {
     // Inicializar cliente WhatsApp para este tenant
     initializeClient() {
         if (this.isInitializing) {
-            console.log(`⏳ [Tenant ${this.tenantId}] Inicialização já em andamento...`);
+            // console.log(`⏳ [Tenant ${this.tenantId}] Inicialização já em andamento...`);
             return this.client;
         }
 
         if (this.client) {
-            console.log(`🔄 [Tenant ${this.tenantId}] Destruindo cliente existente...`);
+            // console.log(`🔄 [Tenant ${this.tenantId}] Destruindo cliente existente...`);
             try {
                 this.client.destroy();
             } catch (error) {
-                console.log(`⚠️ [Tenant ${this.tenantId}] Erro ao destruir cliente anterior:`, error.message);
+                // console.log(`⚠️ [Tenant ${this.tenantId}] Erro ao destruir cliente anterior:`, error.message);
             }
         }
         
@@ -135,7 +135,7 @@ class WhatsAppInstance {
             
             // Verificar se excedeu tentativas máximas
             if (this.qrCodeAttempts >= this.maxQrCodeAttempts) {
-                console.log(`⏹️ [Tenant ${this.tenantId}] Máximo de tentativas de QR code atingido (${this.maxQrCodeAttempts}). Aguardando scan do último QR code...`);
+                // console.log(`⏹️ [Tenant ${this.tenantId}] Máximo de tentativas de QR code atingido (${this.maxQrCodeAttempts}). Aguardando scan do último QR code...`);
                 
                 // NÃO reiniciar automaticamente - apenas aguardar o scan do último QR code
                 await this.updateStatus({
@@ -151,7 +151,7 @@ class WhatsAppInstance {
             this.lastQrCode = qr;
             this.lastQrCodeTime = Date.now();
             
-            console.log(`📱 [Tenant ${this.tenantId}] QR Code gerado (tentativa ${this.qrCodeAttempts}/${this.maxQrCodeAttempts})`);
+            // console.log(`📱 [Tenant ${this.tenantId}] QR Code gerado (tentativa ${this.qrCodeAttempts}/${this.maxQrCodeAttempts})`);
             
             // Limpar timeout anterior se existir
             if (this.qrCodeTimeout) {
@@ -163,7 +163,7 @@ class WhatsAppInstance {
             
             this.qrCodeTimeout = setTimeout(async () => {
                 if (!this.currentStatus.authenticated) {
-                    console.log(`⏰ [Tenant ${this.tenantId}] QR Code expirou após ${timeoutDuration/1000} segundos`);
+                    // console.log(`⏰ [Tenant ${this.tenantId}] QR Code expirou após ${timeoutDuration/1000} segundos`);
                     
                     // Se foi o último QR code, não gerar novo - aguardar restart manual
                     if (this.qrCodeAttempts >= this.maxQrCodeAttempts) {
@@ -194,7 +194,7 @@ class WhatsAppInstance {
 
         // Cliente pronto - resetar contadores e iniciar monitoramento
         this.client.on('ready', async () => {
-            console.log(`✅ [Tenant ${this.tenantId}] WhatsApp conectado e pronto!`);
+            // console.log(`✅ [Tenant ${this.tenantId}] WhatsApp conectado e pronto!`);
             this.isInitializing = false;
             this.isReconnecting = false;
             this.lastQrCode = null;
@@ -223,7 +223,7 @@ class WhatsAppInstance {
 
         // Autenticado - limpar timeouts
         this.client.on('authenticated', async () => {
-            console.log(`🔐 [Tenant ${this.tenantId}] Autenticação realizada!`);
+            // console.log(`🔐 [Tenant ${this.tenantId}] Autenticação realizada!`);
             
             // Limpar timeout quando autenticar
             if (this.qrCodeTimeout) {
@@ -262,7 +262,7 @@ class WhatsAppInstance {
 
         // Desconectado - implementar reconexão automática
         this.client.on('disconnected', async (reason) => {
-            console.log(`🔌 [Tenant ${this.tenantId}] Cliente desconectado:`, reason);
+            // console.log(`🔌 [Tenant ${this.tenantId}] Cliente desconectado:`, reason);
             this.isInitializing = false;
             this.lastQrCode = null;
             
@@ -309,7 +309,7 @@ class WhatsAppInstance {
                 
                 // Se passou mais de 10 minutos sem atividade, verificar conexão (aumentado de 5 para 10)
                 if (timeSinceLastActivity > 10 * 60 * 1000) {
-                    console.log(`🏥 [Tenant ${this.tenantId}] Verificando saúde da conexão...`);
+                    // console.log(`🏥 [Tenant ${this.tenantId}] Verificando saúde da conexão...`);
                     
                     try {
                         // Tentar obter informações do cliente
@@ -320,7 +320,7 @@ class WhatsAppInstance {
                         
                         if (info) {
                             this.lastHealthCheck = now;
-                            console.log(`✅ [Tenant ${this.tenantId}] Conexão saudável`);
+                            // console.log(`✅ [Tenant ${this.tenantId}] Conexão saudável`);
                         }
                     } catch (healthError) {
                         // Só reconectar se for erro crítico
@@ -330,7 +330,7 @@ class WhatsAppInstance {
                             console.error(`⚠️ [Tenant ${this.tenantId}] Conexão parece instável:`, healthError.message);
                             await this.handleConnectionLoss('Healthcheck falhou');
                         } else {
-                            console.log(`⚠️ [Tenant ${this.tenantId}] Healthcheck falhou, mas não é crítico:`, healthError.message);
+                            // console.log(`⚠️ [Tenant ${this.tenantId}] Healthcheck falhou, mas não é crítico:`, healthError.message);
                             this.lastHealthCheck = now; // Resetar para não ficar tentando
                         }
                     }
@@ -343,17 +343,17 @@ class WhatsAppInstance {
     async handleConnectionLoss(reason) {
         // Se já está conectado e funcionando, não fazer nada
         if (this.currentStatus.connected && this.currentStatus.authenticated) {
-            console.log(`✅ [Tenant ${this.tenantId}] Sistema já conectado, ignorando perda de conexão: ${reason}`);
+            // console.log(`✅ [Tenant ${this.tenantId}] Sistema já conectado, ignorando perda de conexão: ${reason}`);
             return;
         }
         
         if (this.isReconnecting) {
-            console.log(`⏳ [Tenant ${this.tenantId}] Reconexão já em andamento...`);
+            // console.log(`⏳ [Tenant ${this.tenantId}] Reconexão já em andamento...`);
             return;
         }
         
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-            console.log(`⏹️ [Tenant ${this.tenantId}] Máximo de tentativas de reconexão atingido (${this.maxReconnectAttempts})`);
+            // console.log(`⏹️ [Tenant ${this.tenantId}] Máximo de tentativas de reconexão atingido (${this.maxReconnectAttempts})`);
             await this.updateStatus({
                 connected: false,
                 authenticated: false,
@@ -367,7 +367,7 @@ class WhatsAppInstance {
         this.reconnectAttempts++;
         this.connectionLostTime = this.connectionLostTime || Date.now();
         
-        console.log(`🔄 [Tenant ${this.tenantId}] Iniciando reconexão automática (tentativa ${this.reconnectAttempts}/${this.maxReconnectAttempts}) - Motivo: ${reason}`);
+        // console.log(`🔄 [Tenant ${this.tenantId}] Iniciando reconexão automática (tentativa ${this.reconnectAttempts}/${this.maxReconnectAttempts}) - Motivo: ${reason}`);
         
         await this.updateStatus({
             connected: false,
@@ -382,7 +382,7 @@ class WhatsAppInstance {
         
         // Verificar novamente se ainda precisa reconectar
         if (this.currentStatus.connected && this.currentStatus.authenticated) {
-            console.log(`✅ [Tenant ${this.tenantId}] Sistema já reconectado durante aguardo, cancelando restart`);
+            // console.log(`✅ [Tenant ${this.tenantId}] Sistema já reconectado durante aguardo, cancelando restart`);
             this.isReconnecting = false;
             return;
         }
@@ -438,7 +438,7 @@ class WhatsAppInstance {
             if (response.ok) {
                 // Log reduzido - apenas mudanças importantes
                 if (status.connected || status.qrCode || status.message.includes('Erro')) {
-                    console.log(`✅ [Tenant ${this.tenantId}] Status: ${status.message}`);
+                    // console.log(`✅ [Tenant ${this.tenantId}] Status: ${status.message}`);
                 }
             } else {
                 console.error(`❌ [Tenant ${this.tenantId}] Erro API:`, response.status);
@@ -462,7 +462,7 @@ class WhatsAppInstance {
             
             // Ignorar canais de notícias, broadcasts e outros tipos especiais
             if (chat.isBroadcast || chat.isReadOnly) {
-                console.log(`📢 [Tenant ${this.tenantId}] Canal/Broadcast ignorado: ${contact.name || contact.pushname || 'Desconhecido'}`);
+                // console.log(`📢 [Tenant ${this.tenantId}] Canal/Broadcast ignorado: ${contact.name || contact.pushname || 'Desconhecido'}`);
                 return;
             }
             
@@ -476,13 +476,13 @@ class WhatsAppInstance {
                 phoneNumber.includes('newsletter') ||
                 phoneNumber.includes('broadcast')
             )) {
-                console.log(`🚫 [Tenant ${this.tenantId}] Número suspeito ignorado: ${phoneNumber} (${contact.name || contact.pushname || 'Desconhecido'})`);
+                // console.log(`🚫 [Tenant ${this.tenantId}] Número suspeito ignorado: ${phoneNumber} (${contact.name || contact.pushname || 'Desconhecido'})`);
                 return;
             }
             
             // Processa mensagens de texto e áudio
             if (message.type !== 'chat' && message.type !== 'ptt') {
-                console.log(`📎 [Tenant ${this.tenantId}] Mensagem de mídia ignorada (tipo: ${message.type})`);
+                // console.log(`📎 [Tenant ${this.tenantId}] Mensagem de mídia ignorada (tipo: ${message.type})`);
                 return;
             }
             
@@ -494,21 +494,21 @@ class WhatsAppInstance {
             if (message.type === 'ptt') {
                 // Mensagem de áudio
                 isAudioMessage = true;
-                console.log(`🎵 [Tenant ${this.tenantId}] Mensagem de áudio recebida`);
+                // console.log(`🎵 [Tenant ${this.tenantId}] Mensagem de áudio recebida`);
                 
                 try {
                     // Baixa o áudio apenas para memória (não salva em disco)
                     const media = await message.downloadMedia();
                     if (media) {
-                        console.log(`🎵 [Tenant ${this.tenantId}] Áudio baixado para memória (não salvo em disco)`);
-                        console.log(`🎵 [Tenant ${this.tenantId}] Formato: ${media.mimetype}, Tamanho: ${Math.round(media.data.length / 1024)}KB`);
+                        // console.log(`🎵 [Tenant ${this.tenantId}] Áudio baixado para memória (não salvo em disco)`);
+                        // console.log(`🎵 [Tenant ${this.tenantId}] Formato: ${media.mimetype}, Tamanho: ${Math.round(media.data.length / 1024)}KB`);
                         
                         // Armazena dados do áudio para enviar ao Gemini
                         audioPath = media; // Armazena o objeto media ao invés do caminho
                         messageContent = '[Mensagem de áudio - processando com IA...]';
                         audioDuration = 0; // Placeholder
                         
-                        console.log(`🎵 [Tenant ${this.tenantId}] Áudio pronto para transcrição via Gemini`);
+                        // console.log(`🎵 [Tenant ${this.tenantId}] Áudio pronto para transcrição via Gemini`);
                     } else {
                         console.error(`❌ [Tenant ${this.tenantId}] Erro ao baixar áudio`);
                         messageContent = '[Erro ao processar áudio]';
@@ -520,7 +520,7 @@ class WhatsAppInstance {
             } else {
                 // Mensagem de texto
                 if (!message.body || message.body.trim() === '') {
-                    console.log(`📝 [Tenant ${this.tenantId}] Mensagem vazia ignorada`);
+                    // console.log(`📝 [Tenant ${this.tenantId}] Mensagem vazia ignorada`);
                     return;
                 }
                 messageContent = message.body;
@@ -530,7 +530,7 @@ class WhatsAppInstance {
             
             // Verificar se temos um número válido
             if (!phoneNumber) {
-                console.log(`⚠️ [Tenant ${this.tenantId}] Número de telefone não identificado, ignorando mensagem`);
+                // console.log(`⚠️ [Tenant ${this.tenantId}] Número de telefone não identificado, ignorando mensagem`);
                 return;
             }
             
@@ -547,18 +547,18 @@ class WhatsAppInstance {
                 console.error(`⚠️ [Tenant ${this.tenantId}] Erro ao acessar banco, continuando sem histórico:`, dbError.message);
             }
             
-            console.log('');
+            // console.log('');
             if (isAudioMessage) {
-                console.log(`🎵 [Tenant ${this.tenantId}] Áudio de ${userName} (${phoneNumber})`);
+                // console.log(`🎵 [Tenant ${this.tenantId}] Áudio de ${userName} (${phoneNumber})`);
             } else {
-                console.log(`💬 [Tenant ${this.tenantId}] ${userName}: ${messageContent}`);
+                // console.log(`💬 [Tenant ${this.tenantId}] ${userName}: ${messageContent}`);
             }
             
             if (isReturning && user) {
                 const lastContact = new Date(user.last_contact).toLocaleDateString('pt-BR');
-                console.log(`🔄 [Tenant ${this.tenantId}] Cliente recorrente - Última conversa: ${lastContact}`);
+                // console.log(`🔄 [Tenant ${this.tenantId}] Cliente recorrente - Última conversa: ${lastContact}`);
             } else {
-                console.log(`✨ [Tenant ${this.tenantId}] Novo cliente`);
+                // console.log(`✨ [Tenant ${this.tenantId}] Novo cliente`);
             }
             
             // Adiciona mensagem ao buffer (modificando para incluir informações de áudio)
@@ -694,7 +694,7 @@ class WhatsAppInstance {
 
     // Reiniciar cliente
     async restart() {
-        console.log(`🔄 [Tenant ${this.tenantId}] Reiniciando cliente WhatsApp...`);
+        // console.log(`🔄 [Tenant ${this.tenantId}] Reiniciando cliente WhatsApp...`);
         
         // Marcar como não reconectando para permitir restart manual
         this.isReconnecting = false;
@@ -726,7 +726,7 @@ class WhatsAppInstance {
 
         try {
             if (this.client) {
-                console.log(`🧹 [Tenant ${this.tenantId}] Limpando cliente anterior...`);
+                // console.log(`🧹 [Tenant ${this.tenantId}] Limpando cliente anterior...`);
                 
                 // Tentar fechar graciosamente primeiro
                 try {
@@ -735,30 +735,30 @@ class WhatsAppInstance {
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 10000))
                     ]);
                 } catch (destroyError) {
-                    console.log(`⚠️ [Tenant ${this.tenantId}] Forçando destruição do cliente:`, destroyError.message);
+                    // console.log(`⚠️ [Tenant ${this.tenantId}] Forçando destruição do cliente:`, destroyError.message);
                 }
                 
                 this.client = null;
             }
         } catch (error) {
-            console.log(`⚠️ [Tenant ${this.tenantId}] Erro ao destruir cliente:`, error.message);
+            // console.log(`⚠️ [Tenant ${this.tenantId}] Erro ao destruir cliente:`, error.message);
         }
 
         // Aguardar um tempo antes de reinicializar (permitir limpeza completa)
-        console.log(`⏳ [Tenant ${this.tenantId}] Aguardando limpeza do sistema...`);
+        // console.log(`⏳ [Tenant ${this.tenantId}] Aguardando limpeza do sistema...`);
         await new Promise(resolve => setTimeout(resolve, 3000)); // 3 segundos
         
         try {
-            console.log(`🚀 [Tenant ${this.tenantId}] Criando novo cliente...`);
+            // console.log(`🚀 [Tenant ${this.tenantId}] Criando novo cliente...`);
             this.initializeClient();
             
             // Aguardar um pouco antes de inicializar
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            console.log(`📡 [Tenant ${this.tenantId}] Inicializando cliente...`);
+            // console.log(`📡 [Tenant ${this.tenantId}] Inicializando cliente...`);
             await this.client.initialize();
             
-            console.log(`✅ [Tenant ${this.tenantId}] Restart concluído com sucesso!`);
+            // console.log(`✅ [Tenant ${this.tenantId}] Restart concluído com sucesso!`);
         } catch (initError) {
             console.error(`❌ [Tenant ${this.tenantId}] Erro na inicialização após restart:`, initError.message);
             
@@ -776,7 +776,7 @@ class WhatsAppInstance {
     // Fazer logout
     async logout() {
         try {
-            console.log(`🔄 [Tenant ${this.tenantId}] Fazendo logout...`);
+            // console.log(`🔄 [Tenant ${this.tenantId}] Fazendo logout...`);
             
             // Parar reconexões automáticas
             this.isReconnecting = false;
@@ -801,7 +801,7 @@ class WhatsAppInstance {
             });
             
             if (this.client) {
-                console.log(`🧹 [Tenant ${this.tenantId}] Destruindo cliente WhatsApp...`);
+                // console.log(`🧹 [Tenant ${this.tenantId}] Destruindo cliente WhatsApp...`);
                 
                 try {
                     // Tentar logout gracioso com timeout
@@ -810,7 +810,7 @@ class WhatsAppInstance {
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Logout timeout')), 15000))
                     ]);
                 } catch (logoutError) {
-                    console.log(`⚠️ [Tenant ${this.tenantId}] Erro no logout, forçando destruição:`, logoutError.message);
+                    // console.log(`⚠️ [Tenant ${this.tenantId}] Erro no logout, forçando destruição:`, logoutError.message);
                 }
                 
                 try {
@@ -820,7 +820,7 @@ class WhatsAppInstance {
                         new Promise((_, reject) => setTimeout(() => reject(new Error('Destroy timeout')), 10000))
                     ]);
                 } catch (destroyError) {
-                    console.log(`⚠️ [Tenant ${this.tenantId}] Erro na destruição:`, destroyError.message);
+                    // console.log(`⚠️ [Tenant ${this.tenantId}] Erro na destruição:`, destroyError.message);
                 }
                 
                 this.client = null;
@@ -832,9 +832,9 @@ class WhatsAppInstance {
             const sessionPath = path.join(__dirname, '..', '.wwebjs_auth', `session-whatsapp-tenant-${this.tenantId}`);
             
             if (fs.existsSync(sessionPath)) {
-                console.log(`🗂️ [Tenant ${this.tenantId}] Removendo arquivos de sessão...`);
+                // console.log(`🗂️ [Tenant ${this.tenantId}] Removendo arquivos de sessão...`);
                 fs.rmSync(sessionPath, { recursive: true, force: true });
-                console.log(`✅ [Tenant ${this.tenantId}] Sessão removida!`);
+                // console.log(`✅ [Tenant ${this.tenantId}] Sessão removida!`);
             }
             
             // Resetar todos os contadores e flags
@@ -856,7 +856,7 @@ class WhatsAppInstance {
                 qrCode: null
             });
             
-            console.log(`✅ [Tenant ${this.tenantId}] Logout concluído com sucesso!`);
+            // console.log(`✅ [Tenant ${this.tenantId}] Logout concluído com sucesso!`);
             return true;
         } catch (error) {
             console.error(`❌ [Tenant ${this.tenantId}] Erro ao fazer logout:`, error);
@@ -878,7 +878,7 @@ class WhatsAppInstance {
 async function getOrCreateInstance(tenantId) {
     try {
         if (!whatsappInstances.has(tenantId)) {
-            console.log(`🆕 [Tenant ${tenantId}] Criando nova instância WhatsApp...`);
+            // console.log(`🆕 [Tenant ${tenantId}] Criando nova instância WhatsApp...`);
             
             // Buscar info do tenant com retry
             let tenantInfo;
@@ -891,7 +891,7 @@ async function getOrCreateInstance(tenantId) {
                     break;
                 } catch (tenantError) {
                     retryCount++;
-                    console.log(`⚠️ [Tenant ${tenantId}] Erro ao buscar tenant (tentativa ${retryCount}/${maxRetries}):`, tenantError.message);
+                    // console.log(`⚠️ [Tenant ${tenantId}] Erro ao buscar tenant (tentativa ${retryCount}/${maxRetries}):`, tenantError.message);
                     if (retryCount >= maxRetries) throw tenantError;
                     await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)); // Backoff
                 }
@@ -902,7 +902,7 @@ async function getOrCreateInstance(tenantId) {
             
             // Inicializar com tratamento robusto de erro
             try {
-                console.log(`🚀 [Tenant ${tenantId}] Inicializando cliente WhatsApp...`);
+                // console.log(`🚀 [Tenant ${tenantId}] Inicializando cliente WhatsApp...`);
                 instance.initializeClient();
                 
                 // Aguardar um tempo apropriado antes de inicializar
@@ -915,7 +915,7 @@ async function getOrCreateInstance(tenantId) {
                 );
                 
                 await Promise.race([initPromise, timeoutPromise]);
-                console.log(`✅ [Tenant ${tenantId}] Cliente inicializado com sucesso!`);
+                // console.log(`✅ [Tenant ${this.tenantId}] Cliente inicializado com sucesso!`);
                 
             } catch (clientError) {
                 console.error(`❌ [Tenant ${tenantId}] Erro ao criar/inicializar cliente:`, clientError.message);
@@ -926,7 +926,7 @@ async function getOrCreateInstance(tenantId) {
                         await instance.client.destroy();
                     }
                 } catch (cleanupError) {
-                    console.log(`⚠️ [Tenant ${tenantId}] Erro na limpeza:`, cleanupError.message);
+                    // console.log(`⚠️ [Tenant ${tenantId}] Erro na limpeza:`, cleanupError.message);
                 }
                 
                 whatsappInstances.delete(tenantId);
@@ -934,7 +934,7 @@ async function getOrCreateInstance(tenantId) {
                 // Tentar novamente após um tempo se for erro recuperável
                 if (clientError.message.includes('Timeout') || 
                     clientError.message.includes('Protocol error')) {
-                    console.log(`🔄 [Tenant ${tenantId}] Agendando nova tentativa em 30 segundos...`);
+                    // console.log(`🔄 [Tenant ${tenantId}] Agendando nova tentativa em 30 segundos...`);
                     setTimeout(async () => {
                         try {
                             await getOrCreateInstance(tenantId);
@@ -948,7 +948,7 @@ async function getOrCreateInstance(tenantId) {
             }
         } else {
             const existingInstance = whatsappInstances.get(tenantId);
-            console.log(`🔄 [Tenant ${tenantId}] Utilizando instância existente`);
+            // console.log(`🔄 [Tenant ${tenantId}] Utilizando instância existente`);
             
             // Verificar se a instância existente está saudável
             if (existingInstance && !existingInstance.isInitializing) {
@@ -963,13 +963,13 @@ async function getOrCreateInstance(tenantId) {
                         ]);
                         
                         if (!info) {
-                            console.log(`⚠️ [Tenant ${tenantId}] Instância não responsiva, criando nova...`);
+                            // console.log(`⚠️ [Tenant ${tenantId}] Instância não responsiva, criando nova...`);
                             whatsappInstances.delete(tenantId);
                             return await getOrCreateInstance(tenantId);
                         }
                     }
                 } catch (healthError) {
-                    console.log(`⚠️ [Tenant ${tenantId}] Healthcheck falhou, instância pode estar instável:`, healthError.message);
+                    // console.log(`⚠️ [Tenant ${tenantId}] Healthcheck falhou, instância pode estar instável:`, healthError.message);
                 }
             }
         }
@@ -992,7 +992,7 @@ async function getOrCreateInstance(tenantId) {
                     clearTimeout(faultyInstance.qrCodeTimeout);
                 }
             } catch (cleanupError) {
-                console.log(`⚠️ [Tenant ${tenantId}] Erro na limpeza de instância corrompida:`, cleanupError.message);
+                // console.log(`⚠️ [Tenant ${tenantId}] Erro na limpeza de instância corrompida:`, cleanupError.message);
             }
             whatsappInstances.delete(tenantId);
         }
@@ -1044,13 +1044,13 @@ async function getDefaultTenantId() {
             if (result.success && result.data) {
                 // Salva em memory para próximas chamadas
                 global.defaultTenantId = result.data.id;
-                console.log(`✅ Tenant padrão definido: ${result.data.id} (${result.data.company_name})`);
+                // console.log(`✅ Tenant padrão definido: ${result.data.id} (${result.data.company_name})`);
                 return result.data.id;
             }
         }
         
         // Fallback para tenant 1 se não conseguir buscar
-        console.log('⚠️ Não foi possível obter tenant do banco, usando fallback: 1');
+        // console.log('⚠️ Não foi possível obter tenant do banco, usando fallback: 1');
         return 1;
     } catch (error) {
         console.error('❌ Erro ao buscar tenant padrão:', error.message);
@@ -1071,17 +1071,17 @@ async function getTenantPrompt(tenantId) {
         
         if (response.ok) {
             const data = await response.json();
-            console.log(`✅ [Tenant ${tenantId}] Prompt e modelo carregados:`, {
-                prompt_length: data.data.base_prompt?.length || 0,
-                ai_model: data.data.ai_model || 'gemini-1.5-flash'
-            });
+            // console.log(`✅ [Tenant ${tenantId}] Prompt e modelo carregados:`, {
+            //     prompt_length: data.data.base_prompt?.length || 0,
+            //     ai_model: data.data.ai_model || 'gemini-1.5-flash'
+            // });
             
             return {
                 prompt: data.data.base_prompt || 'Você é um assistente útil.',
                 ai_model: data.data.ai_model || 'gemini-1.5-flash'
             };
         } else {
-            console.log(`⚠️ [Tenant ${tenantId}] Erro ao buscar prompt da API, usando padrão`);
+            // console.log(`⚠️ [Tenant ${tenantId}] Erro ao buscar prompt da API, usando padrão`);
             return {
                 prompt: 'Você é um assistente útil.',
                 ai_model: 'gemini-1.5-flash'
@@ -1117,7 +1117,7 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
             if (audioMessage && audioMessage.audioPath && audioMessage.audioPath.data) {
                 hasAudio = true;
                 audioData = audioMessage.audioPath; // Objeto media com data e mimetype
-                console.log(`🎵 [Tenant ${tenantId}] Áudio detectado no buffer - enviando para Gemini`);
+                // console.log(`🎵 [Tenant ${tenantId}] Áudio detectado no buffer - enviando para Gemini`);
             }
         }
         
@@ -1229,14 +1229,14 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
         const tenantData = await getTenantPrompt(tenantId);
         const fullPrompt = tenantData.prompt + contextText + `\nCliente: ${combinedMessage}\n\nVocê:`;
         
-        console.log(`🧠 [DEBUG] Usando modelo AI: ${tenantData.ai_model} para tenant ${tenantId}`);
+        // console.log(`🧠 [DEBUG] Usando modelo AI: ${tenantData.ai_model} para tenant ${tenantId}`);
         
         // Criar modelo dinâmico baseado na configuração do tenant
         const tenantModel = genAI.getGenerativeModel({ model: tenantData.ai_model });
         
         let result;
         if (hasAudio && audioData) {
-            console.log('🎵 Processando áudio com IA...');
+            // console.log('🎵 Processando áudio com IA...');
             
             // Prepara o conteúdo multimodal (texto + áudio)
             const parts = [
@@ -1260,7 +1260,7 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
         
         // Se foi áudio, mostra no console a resposta (que deve incluir transcrição)
         if (hasAudio) {
-            console.log('🎵 📝 Resposta baseada no áudio:', text.substring(0, 200) + '...');
+            // console.log('🎵 📝 Resposta baseada no áudio:', text.substring(0, 200) + '...');
         }
         
         // Valida se a resposta foi gerada corretamente
@@ -1298,7 +1298,7 @@ async function generateResponse(messages, phoneNumber, userName, tenantId) {
                         analysis.stage
                     );
                     
-                    console.log(`📊 Análise com ${tenantData.ai_model}: ${analysis.sentiment} | ${analysis.stage}`);
+                    // console.log(`📊 Análise com ${tenantData.ai_model}: ${analysis.sentiment} | ${analysis.stage}`);
                 }
             } catch (analysisError) {
                 console.error('❌ Erro na análise automática:', analysisError.message);
@@ -1409,28 +1409,28 @@ process.on('uncaughtException', (error) => {
 
 // Inicialização do cliente
 console.log('🚀 Iniciando WhatsApp Gemini Chatbot...');
-console.log('');
+// console.log('');
 
 // Verifica se a API key do Gemini está configurada
 if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'sua_chave_api_aqui') {
     console.error('❌ ERRO: Configure sua GEMINI_API_KEY no arquivo .env');
-    console.log('');
+    // console.log('');
     console.log('📋 Passos para configurar:');
     console.log('1. Acesse: https://makersuite.google.com/app/apikey');
     console.log('2. Crie uma nova API key');
     console.log('3. Substitua "sua_chave_api_aqui" no arquivo .env pela sua chave');
-    console.log('');
+    // console.log('');
     process.exit(1);
 }
 
 console.log('✅ Chave API do Gemini configurada com sucesso!');
-console.log('');
+// console.log('');
 
 // Inicializar banco de dados antes do cliente WhatsApp
 database.initialize().then((success) => {
     if (success) {
         console.log('📊 Sistema de banco de dados pronto!');
-        console.log('🔄 Inicializando instâncias WhatsApp que estavam conectadas...');
+        // console.log('🔄 Inicializando instâncias WhatsApp que estavam conectadas...');
         
         // Inicializar automaticamente instâncias que estavam conectadas
         setTimeout(() => {
@@ -1449,7 +1449,8 @@ process.on('SIGINT', async () => {
     
     // Limpa todos os timers do buffer de todas as instâncias
     whatsappInstances.forEach((instance, tenantId) => {
-        console.log(`🧹 [Tenant ${tenantId}] Limpando timers...`);
+        // console.log(`🧹 [Tenant ${tenantId}] Limpando timers...`);
+        // console.log(`🧹 [Tenant ${tenantId}] Limpando timers...`);
         instance.messageBuffer.forEach((bufferData) => {
             clearTimeout(bufferData.timer);
         });
@@ -1488,7 +1489,7 @@ httpApp.post('/restart', async (req, res) => {
         return res.status(400).json({ error: 'tenant_id é obrigatório' });
     }
     
-    console.log(`🔄 Comando de reinicialização recebido para tenant ${tenant_id}`);
+    // console.log(`🔄 Comando de reinicialização recebido para tenant ${tenant_id}`);
     
     try {
         const instance = await getOrCreateInstance(tenant_id);
@@ -1508,7 +1509,7 @@ httpApp.post('/logout', async (req, res) => {
         return res.status(400).json({ error: 'tenant_id é obrigatório' });
     }
     
-    console.log(`🚪 Comando de logout recebido para tenant ${tenant_id}`);
+    // console.log(`🚪 Comando de logout recebido para tenant ${tenant_id}`);
     
     try {
         const instance = whatsappInstances.get(tenant_id);
@@ -1530,7 +1531,7 @@ httpApp.post('/initialize', async (req, res) => {
         return res.status(400).json({ error: 'tenant_id é obrigatório' });
     }
     
-    console.log(`🆕 Comando de inicialização recebido via HTTP`);
+    // console.log(`🆕 Comando de inicialização recebido via HTTP`);
     
     try {
         const instance = await getOrCreateInstance(tenant_id);
@@ -1551,7 +1552,7 @@ httpApp.post('/send-followup', async (req, res) => {
         });
     }
     
-    console.log(`📧 Enviando follow-up para tenant ${tenant_id} - ${phone}`);
+    // console.log(`📧 Enviando follow-up para tenant ${tenant_id} - ${phone}`);
     
     try {
         const instance = whatsappInstances.get(tenant_id);
@@ -1568,7 +1569,7 @@ httpApp.post('/send-followup', async (req, res) => {
         // Enviar mensagem
         await instance.client.sendMessage(whatsappId, message);
         
-        console.log(`✅ Follow-up enviado para ${phone}`);
+        // console.log(`✅ Follow-up enviado para ${phone}`);
         res.json({ 
             success: true, 
             message: 'Follow-up enviado com sucesso' 
@@ -1605,10 +1606,10 @@ httpApp.get('/status', (req, res) => {
 // Start backend server
 httpApp.listen(3002, () => {
     console.log('🔧 Servidor multi-instância do backend ativo na porta 3002');
-    console.log('   • POST http://localhost:3002/restart - Reiniciar WhatsApp (tenant_id obrigatório)');
-    console.log('   • POST http://localhost:3002/logout - Deslogar WhatsApp (tenant_id obrigatório)');
-    console.log('   • POST http://localhost:3002/initialize - Inicializar WhatsApp (tenant_id obrigatório)');
-    console.log('   • GET  http://localhost:3002/status - Status de todas as instâncias');
+    // console.log('   • POST http://localhost:3002/restart - Reiniciar WhatsApp (tenant_id obrigatório)');
+    // console.log('   • POST http://localhost:3002/logout - Deslogar WhatsApp (tenant_id obrigatório)');
+    // console.log('   • POST http://localhost:3002/initialize - Inicializar WhatsApp (tenant_id obrigatório)');
+    // console.log('   • GET  http://localhost:3002/status - Status de todas as instâncias');
 });
 
 // Função para marcar tenant como conectado no banco
@@ -1623,19 +1624,19 @@ async function updateTenantConnectionStatus(tenantId, connected) {
         });
         
         if (response.ok) {
-            console.log(`✅ [Tenant ${tenantId}] Status de conexão atualizado no banco: ${connected}`);
+            // console.log(`✅ [Tenant ${tenantId}] Status de conexão atualizado no banco: ${connected}`);
         } else {
-            console.log(`⚠️ [Tenant ${tenantId}] Não foi possível atualizar status no banco`);
+            // console.log(`⚠️ [Tenant ${tenantId}] Não foi possível atualizar status no banco`);
         }
     } catch (error) {
-        console.log(`⚠️ [Tenant ${tenantId}] Erro ao atualizar status no banco:`, error.message);
+        // console.log(`⚠️ [Tenant ${tenantId}] Erro ao atualizar status no banco:`, error.message);
     }
 }
 
 // Função para inicializar automaticamente instâncias de tenants que estavam conectados
 async function initializeExistingTenants() {
     try {
-        console.log('🔍 Buscando tenants que estavam conectados para reinicializar...');
+        // console.log('🔍 Buscando tenants que estavam conectados para reinicializar...');
         
         const response = await fetch(`${API_BASE}/api/v1/tenants/connected`, {
             method: 'GET',
@@ -1649,26 +1650,26 @@ async function initializeExistingTenants() {
             const connectedTenants = result.data || [];
             
             if (connectedTenants.length === 0) {
-                console.log('📝 Nenhum tenant estava conectado anteriormente');
+                // console.log('📝 Nenhum tenant estava conectado anteriormente');
                 return;
             }
             
-            console.log(`📋 Encontrados ${connectedTenants.length} tenants conectados para reinicializar:`);
-            connectedTenants.forEach(tenant => {
-                console.log(`   • Tenant ${tenant.id}: ${tenant.company_name}`);
-            });
+            // console.log(`📋 Encontrados ${connectedTenants.length} tenants conectados para reinicializar:`);
+            // connectedTenants.forEach(tenant => {
+            //     console.log(`   • Tenant ${tenant.id}: ${tenant.company_name}`);
+            // });
             
             // Inicializar instâncias COM DELAY para evitar conflitos
             for (let i = 0; i < connectedTenants.length; i++) {
                 const tenant = connectedTenants[i];
                 
                 try {
-                    console.log(`🔄 [${i+1}/${connectedTenants.length}] Reinicializando tenant ${tenant.id} (${tenant.company_name})`);
+                    // console.log(`🔄 [${i+1}/${connectedTenants.length}] Reinicializando tenant ${tenant.id} (${tenant.company_name})`);
                     const instance = await getOrCreateInstance(tenant.id);
                     
                     // DELAY entre inicializações para evitar conflitos
                     if (i < connectedTenants.length - 1) {
-                        console.log(`⏳ Aguardando 0,2s antes da próxima inicialização...`);
+                        // console.log(`⏳ Aguardando 0,2s antes da próxima inicialização...`);
                         await new Promise(resolve => setTimeout(resolve, 200));
                     }
                 } catch (instanceError) {
@@ -1681,11 +1682,11 @@ async function initializeExistingTenants() {
             
             console.log(`✅ Processo de reinicialização automática concluído!`);
         } else {
-            console.log('⚠️ Não foi possível buscar tenants conectados - endpoint pode não existir ainda');
-            console.log('💡 Instâncias serão criadas conforme demanda');
+            // console.log('⚠️ Não foi possível buscar tenants conectados - endpoint pode não existir ainda');
+            // console.log('💡 Instâncias serão criadas conforme demanda');
         }
     } catch (error) {
-        console.log('⚠️ Não foi possível buscar tenants conectados:', error.message);
-        console.log('💡 Instâncias serão criadas conforme demanda');
+        // console.log('⚠️ Não foi possível buscar tenants conectados:', error.message);
+        // console.log('💡 Instâncias serão criadas conforme demanda');
     }
 }
