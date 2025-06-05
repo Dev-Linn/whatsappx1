@@ -165,8 +165,11 @@ module.exports = (db) => {
             
             console.log(`🧠 [DEBUG] Usando modelo AI: ${modelToUse} para tenant ${tenantId}`);
 
+            // Usar o prompt salvo no banco de dados, não o do corpo da requisição
+            const promptToUse = base_prompt || tenantPrompt.base_prompt || 'Você é um assistente útil.';
+            
             // Montar prompt final como seria usado na conversa
-            const fullPrompt = `${base_prompt}\n\nCliente: ${test_message}\n\nVocê:`;
+            const fullPrompt = `${promptToUse}\n\nCliente: ${test_message}\n\nVocê:`;
 
             // Testar com Gemini (se a chave API estiver disponível)
             let aiResponse = null;
