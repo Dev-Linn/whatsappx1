@@ -29,6 +29,12 @@ const costsRoutes = require('./routes/costs');
 const conversationsRoutes = require('./routes/conversations');
 const followupRoutes = require('./routes/followup');
 const promptsRoutes = require('./routes/prompts');
+const monitoringRoutes = require('./routes/monitoring');
+
+// Importar serviços de monitoramento
+const MonitoringService = require('./services/monitoring');
+const LoggerService = require('./services/logger');
+const UptimeService = require('./services/uptime');
 
 // Importar middleware de autenticação
 const { authenticateToken, tenantIsolation } = require('./middleware/auth');
@@ -172,6 +178,21 @@ const updateWhatsAppStatus = (tenantId, status) => {
     
     if (hasSignificantChange) {
         console.log(`🔄 [Tenant ${tenantId}] Status: ${newStatus.message}`);
+        
+        // Log do evento no sistema de monitoramento (se disponível)
+        if (global.logger) {
+            global.logger.logWhatsApp(tenantId, 'status_change', newStatus.message, {
+                connected: newStatus.connected,
+                authenticated: newStatus.authenticated,
+                previousStatus: currentStatus
+            });
+        }
+        
+        // Registrar uptime (se disponível)
+        if (global.uptime) {
+            const uptimeStatus = (newStatus.connected && newStatus.authenticated) ? 'up' : 'down';
+            global.uptime.recordUptimeEvent(tenantId, 'whatsapp', uptimeStatus);
+        }
     }
     
     whatsappInstances.set(tenantId, newStatus);
@@ -304,8 +325,35 @@ async function startServer() {
             process.exit(1);
         }
         
+        // Inicializar serviços de monitoramento
+        console.log('🔍 Inicializando serviços de monitoramento...');
+        const monitoring = new MonitoringService(db);
+        const logger = new LoggerService(db);
+        const uptime = new UptimeService(db);
+        
+        // Disponibilizar serviços globalmente
+        app.locals.db = db;
+        app.locals.monitoring = monitoring;
+        app.locals.logger = logger;
+        app.locals.uptime = uptime;
+        
+        // Iniciar serviços de monitoramento
+        monitoring.start();
+        uptime.start();
+        
+        // Disponibilizar serviços globalmente para WhatsApp status updates
+        global.logger = logger;
+        global.uptime = uptime;
+        global.monitoring = monitoring;
+        
+        // Aplicar middleware de logging em todas as rotas
+        app.use(logger.requestLoggerMiddleware());
+        
         // Configurar rotas de autenticação (públicas)
         app.use('/api/v1/auth', authRoutes(db));
+        
+        // Rotas de monitoramento (públicas para health check)
+        app.use('/api/v1/monitoring', monitoringRoutes);
         
         // Configurar rotas da API v1 (com autenticação)
         // Rotas protegidas - requerem JWT
@@ -315,6 +363,10 @@ async function startServer() {
         app.use('/api/v1/conversations', authenticateToken, tenantIsolation, conversationsRoutes(db));
         app.use('/api/v1/followup', authenticateToken, tenantIsolation, followupRoutes(db));
         app.use('/api/v1/prompts', promptsRoutes(db));
+        
+        // Rotas de administração
+        const adminRoutes = require('./routes/admin');
+        app.use('/api/v1/admin', adminRoutes(db));
         
         // Rotas do WhatsApp (com autenticação)
         app.get('/api/v1/whatsapp/status', authenticateToken, tenantIsolation, async (req, res) => {

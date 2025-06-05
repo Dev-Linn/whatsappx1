@@ -16,6 +16,10 @@ import WhatsAppLogin from "./pages/WhatsAppLogin";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
+import { AdminLogin } from "./pages/AdminLogin";
+import { AdminDashboard } from "./pages/AdminDashboard";
+import AdminMonitoring from "./pages/AdminMonitoring";
+import { AdminUsers } from "./pages/AdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +35,12 @@ const App = () => (
               {/* Rotas públicas */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              
+              {/* Rotas de administração */}
+              <Route path="/admin" element={<AdminLogin />} />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/monitoring" element={<AdminMonitoring />} />
+              <Route path="/admin/users" element={<AdminUsers />} />
               
               {/* Rotas protegidas */}
               <Route
