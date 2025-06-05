@@ -47,7 +47,32 @@ const User = sequelize.define('users', {
     observations: { type: DataTypes.TEXT, allowNull: true },
     last_analysis_at: { type: DataTypes.DATE, allowNull: true },
     messages_since_analysis: { type: DataTypes.INTEGER, defaultValue: 0 },
-    is_active: { type: DataTypes.BOOLEAN, defaultValue: true }
+    is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    followup_enabled: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false
+    },
+    followup_interval_hours: {
+        type: DataTypes.INTEGER,
+        defaultValue: 24 // 24 horas por padrão
+    },
+    last_followup_sent: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    next_followup_due: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    followup_count: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0
+    },
+    followup_message: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        defaultValue: 'Oi! Ainda tem interesse nas receitas de pudim? 😊'
+    }
 });
 
 const Conversation = sequelize.define('conversations', {
@@ -86,6 +111,16 @@ const ApiCost = sequelize.define('api_costs', {
     timestamp: { type: DataTypes.DATE, defaultValue: DataTypes.NOW, index: true }
 });
 
+const TenantPrompt = sequelize.define('tenant_prompts', {
+    id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    tenant_id: { type: DataTypes.INTEGER, allowNull: false, unique: true, index: true },
+    base_prompt: { type: DataTypes.TEXT, allowNull: false },
+    clarification_prompt: { type: DataTypes.TEXT, allowNull: true },
+    qualification_prompt: { type: DataTypes.TEXT, allowNull: true },
+    is_active: { type: DataTypes.BOOLEAN, defaultValue: true },
+    last_updated: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+});
+
 // Relacionamentos
 Tenant.hasMany(User, { foreignKey: 'tenant_id', as: 'users' });
 Tenant.hasMany(Conversation, { foreignKey: 'tenant_id', as: 'conversations' });
@@ -109,6 +144,10 @@ ApiCost.belongsTo(Tenant, { foreignKey: 'tenant_id', as: 'tenant' });
 ApiCost.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 ApiCost.belongsTo(Message, { foreignKey: 'message_id', as: 'message' });
 
+// Relacionamentos TenantPrompt
+Tenant.hasOne(TenantPrompt, { foreignKey: 'tenant_id', as: 'prompt' });
+TenantPrompt.belongsTo(Tenant, { foreignKey: 'tenant_id', as: 'tenant' });
+
 class ApiDatabase {
     constructor() {
         this.sequelize = sequelize;
@@ -117,6 +156,7 @@ class ApiDatabase {
         this.Conversation = Conversation;
         this.Message = Message;
         this.ApiCost = ApiCost;
+        this.TenantPrompt = TenantPrompt;
         this.Op = Op;
     }
 
@@ -535,13 +575,13 @@ class ApiDatabase {
                 // Total geral (todos os tempos)
                 this.ApiCost.sum('cost_brl', { where: tenantFilter }),
                 // Estatísticas do modelo (análise de tokens)
-                this.ApiCost.findAll({
+                this.ApiCost.findOne({
                     attributes: [
                         [sequelize.fn('SUM', sequelize.col('input_tokens')), 'total_input'],
                         [sequelize.fn('SUM', sequelize.col('output_tokens')), 'total_output'],
                         [sequelize.fn('SUM', sequelize.col('total_tokens')), 'total_tokens'],
-                        [sequelize.fn('AVG', sequelize.col('input_tokens')), 'avg_input'],
-                        [sequelize.fn('AVG', sequelize.col('output_tokens')), 'avg_output']
+                        [sequelize.fn('SUM', sequelize.col('cost_brl')), 'total_cost'],
+                        [sequelize.fn('COUNT', sequelize.col('id')), 'total_usage']
                     ],
                     where: { 
                         ...tenantFilter,
@@ -556,6 +596,20 @@ class ApiDatabase {
             const avgDaily = periodTotalCosts / days;
             const monthlyAverage = avgDaily * 30;
             const costPerMessage = totalRequests > 0 ? periodTotalCosts / totalRequests : 0;
+
+            // Gerar dados do modelo atual (Gemini 1.5)
+            const modelData = modelStats?.dataValues || {};
+            const costsByModel = [];
+            
+            if (modelData.total_cost && parseFloat(modelData.total_cost) > 0) {
+                costsByModel.push({
+                    model: 'Gemini 1.5',
+                    cost: parseFloat(modelData.total_cost || 0),
+                    usage: parseInt(modelData.total_usage || 0),
+                    tokens: parseInt(modelData.total_tokens || 0),
+                    status: 'active'
+                });
+            }
 
             return {
                 summary: {
@@ -573,12 +627,8 @@ class ApiDatabase {
                         messages: parseInt(day.dataValues.requests || 0)
                     })),
                     
-                    costsByModel: modelStats.map(model => ({
-                        model: model.dataValues.model,
-                        cost: parseFloat(model.dataValues.cost || 0),
-                        usage: parseInt(model.dataValues.usage || 0),
-                        tokens: parseInt(model.dataValues.tokens || 0)
-                    }))
+                    // Dados reais do modelo
+                    costsByModel: costsByModel
                 },
                 dailyBreakdown: dailyCosts.map(day => ({
                     date: day.dataValues.date,
@@ -860,6 +910,168 @@ class ApiDatabase {
             };
         } catch (error) {
             console.error('❌ Erro na busca:', error);
+            throw error;
+        }
+    }
+
+    // TENANT PROMPT METHODS
+    async getTenantPrompt(tenantId) {
+        try {
+            // Primeiro buscar prompt ativo
+            let prompt = await this.TenantPrompt.findOne({
+                where: { tenant_id: tenantId, is_active: true }
+            });
+
+            if (prompt) {
+                return {
+                    id: prompt.id,
+                    base_prompt: prompt.base_prompt,
+                    clarification_prompt: prompt.clarification_prompt,
+                    qualification_prompt: prompt.qualification_prompt,
+                    is_active: prompt.is_active,
+                    last_updated: prompt.last_updated,
+                    is_default: false
+                };
+            }
+
+            // Se não encontrou ativo, buscar qualquer prompt para este tenant
+            const existingPrompt = await this.TenantPrompt.findOne({
+                where: { tenant_id: tenantId }
+            });
+
+            const defaultPromptText = `VOCÊ É UMA PESSOA REAL QUE VENDE RECEITAS DE PUDIM
+
+## SUA IDENTIDADE
+- Você vende receitas de pudim online há um tempo
+- Produto: Ebook com receitas testadas por 10 reais
+- Link: go.perfectpay.com.br/PPU38CPPKIQ
+- Converse como uma pessoa normal conversaria
+
+## COMO FALAR
+- Seja direta e natural
+- Use linguagem do dia a dia: "oi", "pra", "tô", "né"
+- Não seja fake nem exageradamente animada
+- Responda só o que foi perguntado
+- Seja confiante mas não insistente
+
+## REGRAS PRINCIPAIS
+
+**FAZER:**
+- Responder direto ao que foi perguntado
+- Ser natural e espontânea
+- Variar completamente as respostas
+- Falar das receitas sem ser técnica demais
+
+**NÃO FAZER:**
+- Repetir "Oi Marcelinha! Tudo bem?" toda hora
+- Usar sempre as mesmas palavras
+- Falar do link em toda resposta
+- Ser robótica ou fake
+- Dar respostas longas demais
+
+**LEMBRE-SE: Você é uma pessoa normal vendendo receitas, não um robô de vendas**`;
+
+            if (existingPrompt) {
+                // Se existe mas está inativo, reativar com dados padrão
+                prompt = await existingPrompt.update({
+                    base_prompt: defaultPromptText,
+                    clarification_prompt: 'Peça esclarecimento de forma natural: "Não entendi bem. Pode me explicar melhor?" ou "Como assim? Me conta mais detalhes"',
+                    qualification_prompt: 'Identifique se a pessoa tem interesse real em comprar receitas para vender doces ou apenas curiosidade.',
+                    is_active: true,
+                    last_updated: new Date()
+                });
+            } else {
+                // Se não existe nenhum, criar novo
+                prompt = await this.TenantPrompt.create({
+                    tenant_id: tenantId,
+                    base_prompt: defaultPromptText,
+                    clarification_prompt: 'Peça esclarecimento de forma natural: "Não entendi bem. Pode me explicar melhor?" ou "Como assim? Me conta mais detalhes"',
+                    qualification_prompt: 'Identifique se a pessoa tem interesse real em comprar receitas para vender doces ou apenas curiosidade.',
+                    is_active: true,
+                    last_updated: new Date()
+                });
+            }
+
+            return {
+                id: prompt.id,
+                base_prompt: prompt.base_prompt,
+                clarification_prompt: prompt.clarification_prompt,
+                qualification_prompt: prompt.qualification_prompt,
+                is_active: prompt.is_active,
+                last_updated: prompt.last_updated,
+                is_default: true
+            };
+        } catch (error) {
+            console.error('❌ Erro ao buscar prompt do tenant:', error);
+            throw error;
+        }
+    }
+
+    async updateTenantPrompt(tenantId, promptData) {
+        try {
+            const { base_prompt, clarification_prompt, qualification_prompt } = promptData;
+
+            // Validar que o prompt base existe
+            if (!base_prompt || base_prompt.trim().length === 0) {
+                throw new Error('Prompt base é obrigatório');
+            }
+
+            // Verificar se já existe um prompt para este tenant
+            const existingPrompt = await this.TenantPrompt.findOne({
+                where: { tenant_id: tenantId }
+            });
+
+            let prompt;
+            if (existingPrompt) {
+                // Atualizar existente
+                prompt = await existingPrompt.update({
+                    base_prompt: base_prompt.trim(),
+                    clarification_prompt: clarification_prompt ? clarification_prompt.trim() : null,
+                    qualification_prompt: qualification_prompt ? qualification_prompt.trim() : null,
+                    last_updated: new Date(),
+                    is_active: true
+                });
+            } else {
+                // Criar novo
+                prompt = await this.TenantPrompt.create({
+                    tenant_id: tenantId,
+                    base_prompt: base_prompt.trim(),
+                    clarification_prompt: clarification_prompt ? clarification_prompt.trim() : null,
+                    qualification_prompt: qualification_prompt ? qualification_prompt.trim() : null,
+                    is_active: true,
+                    last_updated: new Date()
+                });
+            }
+
+            return {
+                id: prompt.id,
+                base_prompt: prompt.base_prompt,
+                clarification_prompt: prompt.clarification_prompt,
+                qualification_prompt: prompt.qualification_prompt,
+                is_active: prompt.is_active,
+                last_updated: prompt.last_updated
+            };
+        } catch (error) {
+            console.error('❌ Erro ao atualizar prompt do tenant:', error);
+            throw error;
+        }
+    }
+
+    async resetTenantPrompt(tenantId) {
+        try {
+            // Desativar prompt customizado se existir
+            const existingPrompt = await this.TenantPrompt.findOne({
+                where: { tenant_id: tenantId }
+            });
+
+            if (existingPrompt) {
+                await existingPrompt.update({ is_active: false });
+            }
+
+            // Retornar prompt padrão
+            return this.getTenantPrompt(tenantId);
+        } catch (error) {
+            console.error('❌ Erro ao resetar prompt do tenant:', error);
             throw error;
         }
     }

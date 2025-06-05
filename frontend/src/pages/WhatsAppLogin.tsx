@@ -3,14 +3,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { QrCode, Smartphone, CheckCircle, AlertCircle, RotateCcw, Wifi, ArrowRight, LogOut, RefreshCw } from 'lucide-react';
+import { QrCode, Smartphone, CheckCircle, AlertCircle, RotateCcw, Wifi, ArrowRight, LogOut, RefreshCw, Shield, Zap, Settings } from 'lucide-react';
 import QRCode from 'qrcode';
 import { useAuth } from "@/contexts/AuthContext";
 import { useWhatsAppStatus } from "@/contexts/WhatsAppContext";
 
 const WhatsAppLogin = () => {
   const { isAuthenticated } = useAuth();
-  const { whatsappStatus, fetchStatus, initializeWhatsApp, restartWhatsApp, logoutWhatsApp, isLoading } = useWhatsAppStatus();
+  const { 
+    whatsappStatus, 
+    fetchStatus, 
+    initializeWhatsApp, 
+    restartWhatsApp, 
+    logoutWhatsApp, 
+    isLoading, 
+    lastError, 
+    isAutoRetrying 
+  } = useWhatsAppStatus();
   const [qrCodeImage, setQrCodeImage] = useState<string>('');
   const [isRetrying, setIsRetrying] = useState(false);
   const initializationAttempted = useRef(false);
@@ -21,11 +30,22 @@ const WhatsAppLogin = () => {
       initializationAttempted.current = true;
       
       fetchStatus().then(() => {
-        // Se não há QR code e não está conectado, inicializar
-        if (!whatsappStatus.qrCode && !whatsappStatus.connected && !whatsappStatus.message.includes('DESCONECTADO')) {
-          console.log('🆕 WhatsAppLogin: Inicializando WhatsApp sob demanda...');
+        // Inicializar WhatsApp automaticamente quando:
+        // 1. Não está conectado E
+        // 2. Não há QR code ativo E  
+        // 3. Não está fazendo logout ativo E
+        // 4. Não está já inicializando
+        const shouldAutoInitialize = !whatsappStatus.connected && 
+                                    !whatsappStatus.qrCode && 
+                                    !whatsappStatus.message.includes('Removendo') &&
+                                    !whatsappStatus.message.includes('logout') &&
+                                    !whatsappStatus.message.includes('Inicializando') &&
+                                    !isLoading;
+        
+        if (shouldAutoInitialize) {
+          console.log('🆕 WhatsAppLogin: Auto-inicializando WhatsApp (desconectado)...');
           initializeWhatsApp().catch(error => {
-            console.error('❌ WhatsAppLogin: Erro ao inicializar WhatsApp:', error);
+            console.error('❌ WhatsAppLogin: Erro ao auto-inicializar WhatsApp:', error);
           });
         }
       });
@@ -79,6 +99,7 @@ const WhatsAppLogin = () => {
     if (whatsappStatus.authenticated && !whatsappStatus.connected) return "from-yellow-500 to-orange-500";
     if (whatsappStatus.qrCode) return "from-blue-500 to-purple-600";
     if (whatsappStatus.message.includes('DESCONECTADO') || whatsappStatus.message.includes('🔴')) return "from-red-500 to-red-600";
+    if (whatsappStatus.message.includes('Reconectando') || isAutoRetrying) return "from-orange-500 to-yellow-500";
     return "from-gray-500 to-gray-600";
   };
 
@@ -86,6 +107,7 @@ const WhatsAppLogin = () => {
     if (whatsappStatus.connected && whatsappStatus.authenticated) return <CheckCircle className="h-6 w-6" />;
     if (whatsappStatus.qrCode) return <QrCode className="h-6 w-6" />;
     if (whatsappStatus.message.includes('DESCONECTADO') || whatsappStatus.message.includes('🔴')) return <AlertCircle className="h-6 w-6" />;
+    if (whatsappStatus.message.includes('Reconectando') || isAutoRetrying) return <RefreshCw className="h-6 w-6 animate-spin" />;
     return <AlertCircle className="h-6 w-6" />;
   };
 
@@ -94,6 +116,7 @@ const WhatsAppLogin = () => {
     if (whatsappStatus.authenticated && !whatsappStatus.connected) return "🔄 Autenticado";
     if (whatsappStatus.qrCode) return "📱 Aguardando Scan";
     if (whatsappStatus.message.includes('DESCONECTADO') || whatsappStatus.message.includes('🔴')) return "🔴 DESCONECTADO";
+    if (whatsappStatus.message.includes('Reconectando') || isAutoRetrying) return "🔄 Reconectando...";
     return "⏳ Conectando...";
   };
 
@@ -145,6 +168,12 @@ const WhatsAppLogin = () => {
                     </div>
                     Status da Conexão
                   </span>
+                  {(isAutoRetrying || whatsappStatus.message.includes('Reconectando')) && (
+                    <Badge variant="outline" className="text-orange-400 border-orange-400 bg-orange-900/20">
+                      <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                      Auto-retry
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -160,6 +189,26 @@ const WhatsAppLogin = () => {
                     {whatsappStatus.message}
                   </AlertDescription>
                 </Alert>
+
+                {/* Mostrar erros se existirem */}
+                {lastError && !isAutoRetrying && (
+                  <Alert className="bg-red-900/20 border-red-700/50 backdrop-blur">
+                    <AlertCircle className="h-4 w-4 text-red-400" />
+                    <AlertDescription className="text-red-300">
+                      {lastError}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Info sobre reconexão automática */}
+                {isAutoRetrying && (
+                  <Alert className="bg-orange-900/20 border-orange-700/50 backdrop-blur">
+                    <RefreshCw className="h-4 w-4 text-orange-400 animate-spin" />
+                    <AlertDescription className="text-orange-300">
+                      Sistema de reconexão automática ativo. Tentando restabelecer conexão...
+                    </AlertDescription>
+                  </Alert>
+                )}
                 
                 {whatsappStatus.lastUpdate && (
                   <p className="text-xs text-gray-500">

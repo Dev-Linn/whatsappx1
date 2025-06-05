@@ -7,7 +7,7 @@ const path = require('path');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const fetch = require('node-fetch');
-require('dotenv').config({ path: path.join(__dirname, '../.env') });
+require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
 
 // Importar database e middleware
 const ApiDatabase = require('./database');
@@ -27,6 +27,8 @@ const dashboardRoutes = require('./routes/dashboard');
 const usersRoutes = require('./routes/users');
 const costsRoutes = require('./routes/costs');
 const conversationsRoutes = require('./routes/conversations');
+const followupRoutes = require('./routes/followup');
+const promptsRoutes = require('./routes/prompts');
 
 // Importar middleware de autenticação
 const { authenticateToken, tenantIsolation } = require('./middleware/auth');
@@ -103,10 +105,10 @@ io.on('connection', (socket) => {
 // Estrutura para gerenciar múltiplas instâncias de WhatsApp por tenant
 const whatsappInstances = new Map(); // tenant_id -> whatsappStatus
 
-// Controle de rate limiting para auto-inicialização
-const initializationAttempts = new Map(); // tenant_id -> { lastAttempt, attempts }
-const MAX_INIT_ATTEMPTS_PER_HOUR = 5;
-const INIT_COOLDOWN_MS = 10 * 60 * 1000;
+// Controle de rate limiting para auto-inicialização - POR USUÁRIO INDIVIDUAL
+const initializationAttempts = new Map(); // userId -> { lastAttempt, attempts }
+const MAX_INIT_ATTEMPTS_PER_HOUR = 10; // 10 tentativas por hora POR USUÁRIO
+const INIT_COOLDOWN_MS = 1 * 60 * 1000; // 1min entre tentativas POR USUÁRIO
 
 const getDefaultWhatsAppStatus = () => ({
     connected: false,
@@ -116,19 +118,19 @@ const getDefaultWhatsAppStatus = () => ({
     lastUpdate: new Date().toISOString()
 });
 
-// Função para verificar se pode tentar inicializar
-const canAttemptInitialization = (tenantId) => {
+// Função para verificar se pode tentar inicializar - AGORA POR USUÁRIO
+const canAttemptInitialization = (userId) => {
     const now = Date.now();
-    const attempts = initializationAttempts.get(tenantId);
+    const attempts = initializationAttempts.get(userId);
     
     if (!attempts) {
-        initializationAttempts.set(tenantId, { lastAttempt: now, attempts: 1 });
+        initializationAttempts.set(userId, { lastAttempt: now, attempts: 1 });
         return true;
     }
     
     // Reset contador se passou mais de 1 hora
     if (now - attempts.lastAttempt > 60 * 60 * 1000) {
-        initializationAttempts.set(tenantId, { lastAttempt: now, attempts: 1 });
+        initializationAttempts.set(userId, { lastAttempt: now, attempts: 1 });
         return true;
     }
     
@@ -311,6 +313,8 @@ async function startServer() {
         app.use('/api/v1/users', authenticateToken, tenantIsolation, strictLimiter, usersRoutes(db));
         app.use('/api/v1/costs', authenticateToken, tenantIsolation, costsRoutes(db));
         app.use('/api/v1/conversations', authenticateToken, tenantIsolation, conversationsRoutes(db));
+        app.use('/api/v1/followup', authenticateToken, tenantIsolation, followupRoutes(db));
+        app.use('/api/v1/prompts', promptsRoutes(db));
         
         // Rotas do WhatsApp (com autenticação)
         app.get('/api/v1/whatsapp/status', authenticateToken, tenantIsolation, async (req, res) => {
@@ -326,11 +330,12 @@ async function startServer() {
         // Nova rota para inicializar WhatsApp sob demanda
         app.post('/api/v1/whatsapp/initialize', authenticateToken, tenantIsolation, async (req, res) => {
             const tenantId = req.tenant?.id;
+            const userId = req.user?.id; // Pegar ID do usuário do token
             
             try {
-                // Verificar rate limiting
-                if (!canAttemptInitialization(tenantId)) {
-                    return res.error('Rate limit ativo - aguarde antes de tentar novamente', 429);
+                // Verificar rate limiting POR USUÁRIO (não por tenant)
+                if (!canAttemptInitialization(userId)) {
+                    return res.error('Você tentou muitas vezes - aguarde 1 minuto', 429);
                 }
                 
                 // Inicializar instância
@@ -344,7 +349,7 @@ async function startServer() {
                 
                 if (initResponse.ok) {
                     const result = await initResponse.json();
-                    console.log(`✅ Instância WhatsApp inicializada para tenant ${tenantId}`);
+                    console.log(`✅ Instância WhatsApp inicializada para tenant ${tenantId} por usuário ${userId}`);
                     res.success(null, 'Instância WhatsApp inicializada com sucesso');
                 } else {
                     console.error(`❌ Erro ao inicializar instância para tenant ${tenantId}:`, initResponse.status);

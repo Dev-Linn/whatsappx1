@@ -1,8 +1,16 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+require('dotenv').config({ path: require('path').join(__dirname, '../../backend/.env') });
 
 // Secret para JWT (em produção, usar variável de ambiente)
-const JWT_SECRET = process.env.JWT_SECRET || 'seu_jwt_secret_super_seguro_aqui_123';
+const JWT_SECRET = process.env.JWT_SECRET || 'whatsapp-bot-jwt-secret-key-2024';
+
+// Debug para verificar se o JWT_SECRET está sendo carregado
+if (!process.env.JWT_SECRET) {
+    console.log('⚠️ JWT_SECRET não encontrado nas variáveis de ambiente, usando chave padrão');
+} else {
+    console.log('✅ JWT_SECRET carregado das variáveis de ambiente');
+}
 
 // Middleware de autenticação JWT
 const authenticateToken = (req, res, next) => {

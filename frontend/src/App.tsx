@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Conversations from "./pages/Conversations";
 import Costs from "./pages/Costs";
+import IA from "./pages/IA";
 import WhatsAppLogin from "./pages/WhatsAppLogin";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -45,6 +46,7 @@ const App = () => (
                           <Route path="/users" element={<Users />} />
                           <Route path="/conversations" element={<Conversations />} />
                           <Route path="/costs" element={<Costs />} />
+                          <Route path="/ia" element={<IA />} />
                           <Route path="/whatsapp-login" element={<WhatsAppLogin />} />
                           <Route path="*" element={<NotFound />} />
                         </Routes>

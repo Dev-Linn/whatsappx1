@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useApi, apiPut } from "@/hooks/useApi";
 import { Edit2, Search } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { FollowUpCard } from "@/components/FollowUpCard";
 
 interface User {
   id: number;
@@ -45,6 +46,7 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState<number[]>([]);
   const { toast } = useToast();
 
   const buildQuery = () => {
@@ -88,6 +90,22 @@ const Users = () => {
         description: "Erro de conexão",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleUserSelection = (userId: number, checked: boolean) => {
+    if (checked) {
+      setSelectedUsers(prev => [...prev, userId]);
+    } else {
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && data?.users) {
+      setSelectedUsers(data.users.map(user => user.id));
+    } else {
+      setSelectedUsers([]);
     }
   };
 
@@ -135,7 +153,7 @@ const Users = () => {
       <div className="max-w-7xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Gerenciar Usuários</h1>
-          <p className="text-gray-400">Visualize e edite informações dos leads</p>
+          <p className="text-gray-400">Visualize, edite e configure follow-ups para os leads</p>
         </div>
 
         {/* Filtros */}
@@ -187,6 +205,7 @@ const Users = () => {
                   setSentimentFilter('all');
                   setSearchTerm('');
                   setPage(1);
+                  setSelectedUsers([]); // Limpar seleção também
                 }}
                 variant="outline" 
                 className="border-gray-600 text-gray-300 hover:bg-gray-700"
@@ -196,6 +215,17 @@ const Users = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Informações de Seleção */}
+        {selectedUsers.length > 0 && (
+          <Card className="bg-blue-900/20 border-blue-500 mb-6">
+            <CardContent className="py-3">
+              <p className="text-blue-300">
+                {selectedUsers.length} usuário(s) selecionado(s) para edição
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabela de Usuários */}
         <Card className="bg-gray-800 border-gray-700">
@@ -209,11 +239,19 @@ const Users = () => {
               <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
                 <p className="text-red-300">{error}</p>
               </div>
-            ) : (
+            ) : data?.users && data.users.length > 0 ? (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-gray-700">
+                      <TableHead className="text-gray-300 w-12">
+                        <input
+                          type="checkbox"
+                          checked={data?.users ? selectedUsers.length === data.users.length : false}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          className="rounded"
+                        />
+                      </TableHead>
                       <TableHead className="text-gray-300">Nome</TableHead>
                       <TableHead className="text-gray-300">Telefone</TableHead>
                       <TableHead className="text-gray-300">Estágio</TableHead>
@@ -225,28 +263,36 @@ const Users = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {data?.users?.map((user) => (
-                      <TableRow key={user.id} className="border-gray-700">
-                        <TableCell className="text-white font-medium">{user.name || 'Nome não informado'}</TableCell>
-                        <TableCell className="text-gray-300">{user.phone || 'Telefone não informado'}</TableCell>
-                        <TableCell>
+                    {data.users.map((user) => (
+                      <TableRow key={user.id} className="border-gray-700 bg-gray-800">
+                        <TableCell className="p-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedUsers.includes(user.id)}
+                            onChange={(e) => handleUserSelection(user.id, e.target.checked)}
+                            className="rounded"
+                          />
+                        </TableCell>
+                        <TableCell className="text-white font-medium p-4">{user.name || 'Nome não informado'}</TableCell>
+                        <TableCell className="text-gray-300 p-4">{user.phone || 'Telefone não informado'}</TableCell>
+                        <TableCell className="p-4">
                           <span className={`px-2 py-1 rounded-full text-xs border ${getStageColor(user.stage)}`}>
                             {user.stage || 'Não definido'}
                           </span>
                         </TableCell>
-                        <TableCell className={getSentimentColor(user.sentiment)}>
+                        <TableCell className={`p-4 ${getSentimentColor(user.sentiment)}`}>
                           {user.sentiment || 'Neutro'}
                         </TableCell>
-                        <TableCell className="text-gray-300">
+                        <TableCell className="text-gray-300 p-4">
                           {user.totalMessages || 0}
                         </TableCell>
-                        <TableCell className="text-gray-300 max-w-xs truncate">
+                        <TableCell className="text-gray-300 max-w-xs truncate p-4">
                           {user.lastMessage?.content || 'Sem mensagens'}
                         </TableCell>
-                        <TableCell className="text-gray-400 text-sm">
+                        <TableCell className="text-gray-400 text-sm p-4">
                           {formatDate(user.lastContact)}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="p-4">
                           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
                             <DialogTrigger asChild>
                               <Button
@@ -277,10 +323,14 @@ const Users = () => {
                   </TableBody>
                 </Table>
               </div>
+            ) : (
+              <div className="bg-yellow-900/20 border border-yellow-500 rounded-lg p-4">
+                <p className="text-yellow-300">⚠️ Nenhum usuário encontrado</p>
+              </div>
             )}
 
             {/* Paginação */}
-            {data && data.pagination.pages > 1 && (
+            {data && data.pagination && data.pagination.pages > 1 && (
               <div className="flex justify-center items-center gap-2 mt-6">
                 <Button
                   variant="outline"
@@ -305,6 +355,11 @@ const Users = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Card de Follow-up Manual */}
+        <div className="mt-6">
+          <FollowUpCard />
+        </div>
       </div>
     </div>
   );

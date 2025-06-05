@@ -37,7 +37,12 @@ interface Message {
 
 interface ConversationsResponse {
   conversations: Conversation[];
-  total: number;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
 }
 
 interface MessagesResponse {
@@ -137,7 +142,7 @@ const Conversations = () => {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <MessageCircle className="h-5 w-5 text-purple-400" />
-                Conversas ({conversationsData?.total || 0})
+                Conversas ({conversationsData?.pagination.total || 0})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">

@@ -27,7 +27,6 @@ const User = sequelize.define('users', {
     },
     phone: {
         type: DataTypes.STRING(20),
-        unique: true,
         allowNull: false,
         index: true
     },
@@ -79,6 +78,14 @@ const User = sequelize.define('users', {
         allowNull: false,
         index: true
     }
+}, {
+    indexes: [
+        {
+            unique: true,
+            fields: ['phone', 'tenant_id'], // Constraint único composto
+            name: 'unique_phone_tenant'
+        }
+    ]
 });
 
 // Modelo de Sessões de Conversa (simplificado)
@@ -263,7 +270,7 @@ class DatabaseManager {
     // Buscar ou criar usuário
     async findOrCreateUser(phone, name, tenantId) {
         try {
-            // Primeiro, tenta buscar o usuário existente
+            // Buscar usuário existente com constraint composto correto
             let user = await User.findOne({
                 where: { 
                     phone,
@@ -272,7 +279,7 @@ class DatabaseManager {
             });
 
             if (user) {
-                // Usuário existe, apenas atualiza última conversa e nome se mudou
+                // Usuário existe, atualiza dados se necessário
                 await user.update({
                     name: name || user.name,
                     last_contact: new Date()
@@ -280,46 +287,44 @@ class DatabaseManager {
                 return user;
             }
 
-            // Usuário não existe, tenta criar
-            try {
-                user = await User.create({
-                    phone,
-                    name: name || 'Usuário',
-                    tenant_id: tenantId,
-                    first_contact: new Date(),
-                    last_contact: new Date()
-                });
+            // Usuário não existe, criar novo
+            user = await User.create({
+                phone,
+                name: name || 'Usuário',
+                tenant_id: tenantId,
+                first_contact: new Date(),
+                last_contact: new Date()
+            });
+            
+            console.log(`👤 Novo usuário: ${name} (${phone}) - Tenant ${tenantId}`);
+            return user;
+
+        } catch (error) {
+            // Se for erro de constraint, tenta buscar novamente
+            if (error.name === 'SequelizeUniqueConstraintError' || 
+                error.message.includes('UNIQUE constraint failed')) {
                 
-                console.log(`👤 Novo usuário criado: ${name} (${phone}) - Tenant ${tenantId}`);
-                return user;
-            } catch (createError) {
-                // Se falhar na criação (constraint único), tenta buscar novamente
-                // Isso pode acontecer em condições de corrida
-                if (createError.name === 'SequelizeUniqueConstraintError') {
-                    console.log(`🔄 Constraint único detectado, buscando usuário existente: ${phone} - Tenant ${tenantId}`);
-                    
-                    user = await User.findOne({
+                try {
+                    const existingUser = await User.findOne({
                         where: { 
                             phone,
                             tenant_id: tenantId
                         }
                     });
                     
-                    if (user) {
-                        // Atualiza dados se encontrou
-                        await user.update({
-                            name: name || user.name,
+                    if (existingUser) {
+                        await existingUser.update({
+                            name: name || existingUser.name,
                             last_contact: new Date()
                         });
-                        return user;
+                        return existingUser;
                     }
+                } catch (retryError) {
+                    console.error(`❌ Erro ao retentar buscar usuário ${phone}:`, retryError.message);
                 }
-                
-                throw createError; // Re-throw se não conseguiu resolver
             }
-
-        } catch (error) {
-            console.error(`❌ Erro ao buscar/criar usuário ${phone} (Tenant ${tenantId}):`, error.message);
+            
+            console.error(`❌ Erro ao criar usuário ${phone} (Tenant ${tenantId}):`, error.message);
             return null;
         }
     }

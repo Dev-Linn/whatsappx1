@@ -45,6 +45,11 @@ const Navigation = () => {
       icon: DollarSign,
     },
     {
+      title: "IA",
+      href: "/ia",
+      icon: Bot,
+    },
+    {
       title: "WhatsApp Login",
       href: "/whatsapp-login",
       icon: Smartphone,

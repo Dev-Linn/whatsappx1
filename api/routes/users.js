@@ -2,6 +2,58 @@ const express = require('express');
 const router = express.Router();
 
 module.exports = (db) => {
+    // GET /api/v1/users/followup-eligible - Usuários elegíveis para follow-up (sem contato há +24h)
+    router.get('/followup-eligible', async (req, res) => {
+        try {
+            const tenantId = req.tenant?.id;
+            
+            // Buscar usuários que não receberam mensagem há mais de 24 horas
+            const cutoffTime = new Date();
+            cutoffTime.setHours(cutoffTime.getHours() - 24);
+            
+            const users = await db.User.findAll({
+                where: {
+                    tenant_id: tenantId,
+                    last_contact: {
+                        [db.Op.lt]: cutoffTime.toISOString()
+                    },
+                    stage: {
+                        [db.Op.in]: ['lead_frio', 'interessado', 'negociando'] // Apenas leads ativos
+                    }
+                },
+                order: [['last_contact', 'ASC']], // Mais antigos primeiro
+                limit: 50 // Máximo 50 para não sobrecarregar
+            });
+
+            const followUpUsers = users.map(user => {
+                const lastContact = new Date(user.last_contact);
+                const now = new Date();
+                const hoursWithoutContact = Math.floor((now - lastContact) / (1000 * 60 * 60));
+                
+                return {
+                    id: user.id,
+                    name: user.name,
+                    phone: user.phone,
+                    stage: user.stage,
+                    sentiment: user.sentiment,
+                    lastContact: user.last_contact,
+                    hoursWithoutContact
+                };
+            });
+
+            console.log(`🔍 Follow-up: Encontrados ${followUpUsers.length} usuários elegíveis para tenant ${tenantId}`);
+
+            res.success({
+                users: followUpUsers,
+                total: followUpUsers.length
+            }, 'Usuários elegíveis para follow-up carregados');
+            
+        } catch (error) {
+            console.error('Erro ao carregar usuários para follow-up:', error);
+            res.error('Erro ao carregar usuários para follow-up', 500);
+        }
+    });
+
     // GET /api/v1/users - Lista usuários com filtros e paginação
     router.get('/', async (req, res) => {
         try {
@@ -312,6 +364,116 @@ module.exports = (db) => {
             }
         } catch (error) {
             res.error('Erro ao exportar dados de usuários', 500);
+        }
+    });
+
+    // POST /api/v1/users/send-followup - Enviar mensagens de follow-up via WhatsApp
+    router.post('/send-followup', async (req, res) => {
+        try {
+            const tenantId = req.tenant?.id;
+            const { userIds, message } = req.body;
+
+            if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+                return res.error('Lista de usuários é obrigatória', 400);
+            }
+
+            if (!message || message.trim().length === 0) {
+                return res.error('Mensagem é obrigatória', 400);
+            }
+
+            // Buscar usuários válidos
+            const users = await db.User.findAll({
+                where: {
+                    id: { [db.Op.in]: userIds },
+                    tenant_id: tenantId
+                }
+            });
+
+            if (users.length === 0) {
+                return res.error('Nenhum usuário válido encontrado', 400);
+            }
+
+            console.log(`📤 Enviando follow-up para ${users.length} usuários do tenant ${tenantId}`);
+
+            const results = [];
+            let successCount = 0;
+            let errorCount = 0;
+
+            // Enviar mensagens via backend WhatsApp
+            for (const user of users) {
+                try {
+                    const whatsappResponse = await fetch('http://localhost:3002/send-followup', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            tenant_id: tenantId,
+                            phone: user.phone,
+                            message: message.trim(),
+                            user_name: user.name
+                        })
+                    });
+
+                    const responseData = await whatsappResponse.json();
+
+                    if (whatsappResponse.ok && responseData.success) {
+                        successCount++;
+                        results.push({
+                            userId: user.id,
+                            name: user.name,
+                            phone: user.phone,
+                            status: 'success',
+                            message: 'Mensagem enviada com sucesso'
+                        });
+
+                        // Atualizar último contato
+                        await user.update({
+                            last_contact: new Date(),
+                            total_messages: user.total_messages + 1
+                        });
+
+                        console.log(`✅ Follow-up enviado para ${user.name} (${user.phone})`);
+                    } else {
+                        errorCount++;
+                        results.push({
+                            userId: user.id,
+                            name: user.name,
+                            phone: user.phone,
+                            status: 'error',
+                            message: responseData.error || 'Erro ao enviar mensagem'
+                        });
+
+                        console.log(`❌ Erro ao enviar follow-up para ${user.name}: ${responseData.error}`);
+                    }
+
+                    // Delay entre envios para não spam
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+
+                } catch (error) {
+                    errorCount++;
+                    results.push({
+                        userId: user.id,
+                        name: user.name,
+                        phone: user.phone,
+                        status: 'error',
+                        message: `Erro de conexão: ${error.message}`
+                    });
+
+                    console.log(`❌ Erro de conexão ao enviar para ${user.name}: ${error.message}`);
+                }
+            }
+
+            res.success({
+                totalUsers: users.length,
+                successCount,
+                errorCount,
+                results
+            }, `Follow-up enviado: ${successCount} sucesso(s), ${errorCount} erro(s)`);
+
+        } catch (error) {
+            console.error('❌ Erro ao enviar follow-up:', error);
+            res.error('Erro ao enviar follow-up', 500);
         }
     });
 
