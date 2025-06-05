@@ -1,13 +1,14 @@
 // Configuração da API baseada no ambiente
 const getApiUrl = () => {
+  const hostname = window.location.hostname;
+  const protocol = window.location.protocol;
+  
   // Se estiver em desenvolvimento (localhost), usar proxy do Vite
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return '';  // Usa proxy do Vite (/api -> localhost:3001/api)
   }
   
-  // Se estiver em produção, usar o mesmo domínio na porta 3001
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname;
+  // Se estiver em produção (qualquer outro hostname), usar o mesmo hostname na porta 3001
   return `${protocol}//${hostname}:3001`;
 };
 

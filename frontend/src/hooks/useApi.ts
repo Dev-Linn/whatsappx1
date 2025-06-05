@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiCall } from '@/lib/auth';
 
-const API_BASE = 'http://localhost:3001/api/v1';
-
 interface ApiResponse<T> {
   success: boolean;
   data?: T;

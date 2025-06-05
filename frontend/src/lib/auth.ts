@@ -1,19 +1,7 @@
 // Utilitários de autenticação JWT
-// Detecta automaticamente a API base baseado na URL atual
-const getApiBase = () => {
-  const currentUrl = window.location.href;
-  
-  // Se estiver acessando via IP da rede (192.168.x.x), usar o mesmo IP para a API
-  if (currentUrl.includes('192.168.')) {
-    const hostname = window.location.hostname;
-    return `http://${hostname}:3001/api/v1`;
-  }
-  
-  // Se estiver acessando via localhost, usar localhost
-  return 'http://localhost:3001/api/v1';
-};
+import { API_BASE_URL } from './config';
 
-const API_BASE = getApiBase();
+const API_BASE = `${API_BASE_URL}/api/v1`;
 console.log('🔗 API Base configurada para:', API_BASE);
 const TOKEN_KEY = 'whatsapp_bot_token';
 const TENANT_KEY = 'whatsapp_bot_tenant';
