@@ -9,6 +9,9 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navigation from "./components/Navigation";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
+import Analytics from "./pages/Analytics";
+import AnalyticsPopup from "./pages/AnalyticsPopup";
+import GoogleCallback from "./pages/GoogleCallback";
 import Conversations from "./pages/Conversations";
 import Costs from "./pages/Costs";
 import IA from "./pages/IA";
@@ -35,6 +38,8 @@ const App = () => (
               {/* Rotas públicas */}
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/analytics/popup" element={<AnalyticsPopup />} />
+              <Route path="/auth/google/callback" element={<GoogleCallback />} />
               
               {/* Rotas de administração */}
               <Route path="/admin" element={<AdminLogin />} />
@@ -54,6 +59,7 @@ const App = () => (
                           <Route path="/" element={<Dashboard />} />
                           <Route path="/dashboard" element={<Dashboard />} />
                           <Route path="/users" element={<Users />} />
+                          <Route path="/analytics" element={<Analytics />} />
                           <Route path="/conversations" element={<Conversations />} />
                           <Route path="/costs" element={<Costs />} />
                           <Route path="/ia" element={<IA />} />

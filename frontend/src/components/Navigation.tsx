@@ -12,7 +12,8 @@ import {
   Bot,
   Smartphone,
   LogOut,
-  Building
+  Building,
+  BarChart3
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWhatsAppStatus } from "@/contexts/WhatsAppContext";
@@ -33,6 +34,11 @@ const Navigation = () => {
       title: "Usuários",
       href: "/users",
       icon: Users,
+    },
+    {
+      title: "Analytics",
+      href: "/analytics",
+      icon: BarChart3,
     },
     {
       title: "Conversas",

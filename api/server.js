@@ -30,6 +30,7 @@ const conversationsRoutes = require('./routes/conversations');
 const followupRoutes = require('./routes/followup');
 const promptsRoutes = require('./routes/prompts');
 const monitoringRoutes = require('./routes/monitoring');
+const analyticsRoutes = require('./routes/analytics');
 
 // Importar serviços de monitoramento
 const MonitoringService = require('./services/monitoring');
@@ -363,6 +364,9 @@ async function startServer() {
         app.use('/api/v1/conversations', authenticateToken, tenantIsolation, conversationsRoutes(db));
         app.use('/api/v1/followup', authenticateToken, tenantIsolation, followupRoutes(db));
         app.use('/api/v1/prompts', promptsRoutes(db));
+        console.log('🔍 [SERVER DEBUG] Registrando rotas analytics...');
+console.log('🔍 [SERVER DEBUG] analyticsRoutes type:', typeof analyticsRoutes);
+app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes(db));
         
         // Rotas de administração
         const adminRoutes = require('./routes/admin');
