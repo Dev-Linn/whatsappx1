@@ -15,10 +15,15 @@ const corsOptions = {
         // Domínio de produção
         'https://lucrogourmet.shop',
         'http://lucrogourmet.shop',
+        // IP da VPS
+        'http://159.223.164.124:8080',
+        'http://159.223.164.124:3001',
         // Aceitar qualquer IP da rede local nas portas comuns
         /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/,
         /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/,
-        /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/
+        /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/,
+        // Regex para qualquer IP público nas portas do projeto
+        /^http:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/
     ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

@@ -70,7 +70,8 @@ const io = new Server(server, {
             "http://localhost:8080", 
             "http://localhost:5173",
             "https://lucrogourmet.shop",
-            "http://lucrogourmet.shop"
+            "http://lucrogourmet.shop",
+            "http://159.223.164.124:8080"
         ],
         methods: ["GET", "POST"]
     }
