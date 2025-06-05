@@ -94,16 +94,36 @@ const AdminMonitoring: React.FC = () => {
   const loadDashboard = async () => {
     try {
       const response = await apiCall('/monitoring/dashboard');
-      
-      if (response.success) {
-        const dashboard = response.data?.dashboard || response.data || {};
-        setServices(dashboard.services || {});
-        setAlerts(dashboard.alerts?.recent || []);
-        setUptimeMetrics(dashboard.uptime);
-        setUnacknowledgedCount(dashboard.alerts?.unacknowledged || 0);
+      console.log('AdminMonitoring loadDashboard response:', JSON.stringify(response, null, 2)); // Log the full response
+
+      if (response.success && response.data) {
+        let dashboardData = null;
+        if (response.data.dashboard) {
+          dashboardData = response.data.dashboard;
+        } else {
+          console.warn("AdminMonitoring: 'response.data.dashboard' is missing. Falling back to 'response.data'. This might indicate an API response structure issue.");
+          dashboardData = response.data; // Fallback, though the API seems to provide .dashboard
+        }
+
+        setServices(dashboardData.services || {});
+        setAlerts(dashboardData.alerts?.recent || []);
+        setUptimeMetrics(dashboardData.uptime || null); // Ensure uptimeMetrics can be null
+        setUnacknowledgedCount(dashboardData.alerts?.unacknowledged || 0);
+      } else {
+        console.error('AdminMonitoring: response was not successful or response.data is missing.', response);
+        // Keep existing error handling or enhance it
+        setServices({});
+        setAlerts([]);
+        setUptimeMetrics(null);
+        setUnacknowledgedCount(0);
       }
     } catch (error) {
       console.error('Erro ao carregar dashboard:', error);
+      // Ensure state is reset on error too
+      setServices({});
+      setAlerts([]);
+      setUptimeMetrics(null);
+      setUnacknowledgedCount(0);
     }
   };
 
@@ -124,6 +144,8 @@ const AdminMonitoring: React.FC = () => {
       }
     } catch (error) {
       console.error('Erro ao carregar logs:', error);
+      setLogs([]);
+      setLogsTotal(0);
     }
   };
 

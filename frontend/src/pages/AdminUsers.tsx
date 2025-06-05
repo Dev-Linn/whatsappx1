@@ -113,6 +113,8 @@ export const AdminUsers: React.FC = () => {
     } catch (error) {
       setError('Erro ao carregar usuários');
       console.error('Erro:', error);
+      setUsers([]);
+      setTenants([]); // Also reset tenants as they are fetched together
     } finally {
       setLoading(false);
     }
