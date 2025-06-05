@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Send, MessageCircle, Users, Zap, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { API_ENDPOINTS } from "@/lib/config";
 import { useApi } from "@/hooks/useApi";
 
 interface FollowUpUser {
@@ -68,7 +69,7 @@ export function FollowUpCard() {
             console.log('💬 Mensagem:', customMessage);
 
             // Enviar via API para o WhatsApp real
-            const response = await fetch('http://localhost:3001/api/v1/users/send-followup', {
+            const response = await fetch(API_ENDPOINTS.USERS_FOLLOWUP, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

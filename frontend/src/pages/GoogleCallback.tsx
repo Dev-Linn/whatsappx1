@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { getToken } from "@/lib/auth";
+import { API_ENDPOINTS } from "@/lib/config";
 
 const GoogleCallback = () => {
   const navigate = useNavigate();
@@ -48,7 +49,7 @@ const GoogleCallback = () => {
         }
 
         // Enviar código para a API
-        const response = await fetch('http://localhost:3001/api/v1/analytics/auth/google/callback', {
+        const response = await fetch(API_ENDPOINTS.ANALYTICS_CALLBACK, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

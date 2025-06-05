@@ -12,6 +12,9 @@ const corsOptions = {
         'http://127.0.0.1:3000',
         'http://127.0.0.1:3001',
         'http://127.0.0.1:8080',
+        // Domínio de produção
+        'https://lucrogourmet.shop',
+        'http://lucrogourmet.shop',
         // Aceitar qualquer IP da rede local nas portas comuns
         /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/,
         /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}:(3000|3001|8080|5173)$/,

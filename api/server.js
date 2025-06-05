@@ -66,7 +66,12 @@ app.use('/api/', limiter);
 // Configuração do Socket.IO
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:8080", "http://localhost:5173"],
+        origin: [
+            "http://localhost:8080", 
+            "http://localhost:5173",
+            "https://lucrogourmet.shop",
+            "http://lucrogourmet.shop"
+        ],
         methods: ["GET", "POST"]
     }
 });

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Play, Pause, Volume2 } from 'lucide-react';
 import { Button } from './button';
+import { API_ENDPOINTS } from "@/lib/config";
 
 interface AudioPlayerProps {
   audioPath: string;
@@ -19,7 +20,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
-  const audioUrl = audioPath ? `http://localhost:3001/api/v1/audio/${audioPath.split('/').pop()}` : '';
+  const audioUrl = audioPath ? `${API_ENDPOINTS.AUDIO_BASE}/${audioPath.split('/').pop()}` : '';
 
   useEffect(() => {
     const audio = audioRef.current;

@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { getToken } from "@/lib/auth";
+import { API_ENDPOINTS } from "@/lib/config";
 import { BarChart3, CheckCircle, ArrowRight } from "lucide-react";
 
 interface Account {
@@ -33,7 +34,7 @@ const AnalyticsPopup = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const response = await fetch('http://localhost:3001/api/v1/analytics/accounts', {
+      const response = await fetch(API_ENDPOINTS.ANALYTICS_ACCOUNTS, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -67,7 +68,7 @@ const AnalyticsPopup = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const response = await fetch(`http://localhost:3001/api/v1/analytics/accounts/${accountId}/properties`, {
+      const response = await fetch(`${API_ENDPOINTS.ANALYTICS_ACCOUNTS}/${accountId}/properties`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -102,7 +103,7 @@ const AnalyticsPopup = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const response = await fetch('http://localhost:3001/api/v1/analytics/selection', {
+      const response = await fetch(API_ENDPOINTS.ANALYTICS_SELECTION, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

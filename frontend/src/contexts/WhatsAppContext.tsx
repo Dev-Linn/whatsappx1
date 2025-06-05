@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { apiCall, getToken } from '@/lib/auth';
+import { API_ENDPOINTS } from '@/lib/config';
 import io, { Socket } from 'socket.io-client';
 
 interface WhatsAppStatus {
@@ -72,7 +73,7 @@ export const WhatsAppProvider: React.FC<WhatsAppProviderProps> = ({ children }) 
 
       connectionAttemptRef.current = true;
 
-      const newSocket = io('http://localhost:3001', {
+      const newSocket = io(API_ENDPOINTS.SOCKET_URL, {
         auth: {
           token: token
         },

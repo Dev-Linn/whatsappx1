@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { getToken } from "@/lib/auth";
+import { API_ENDPOINTS } from "@/lib/config";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -89,7 +90,7 @@ const Analytics = () => {
       console.log('🔍 [ANALYTICS DEBUG] Token via getToken():', token ? `${token.substring(0, 20)}...` : 'NULL');
       console.log('🔍 [ANALYTICS DEBUG] localStorage keys:', Object.keys(localStorage));
       
-              const response = await fetch('http://localhost:3001/api/v1/analytics/auth/status', {
+              const response = await fetch(API_ENDPOINTS.ANALYTICS_STATUS, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -122,7 +123,7 @@ const Analytics = () => {
       const token = getToken();
       console.log('🔍 [ANALYTICS DEBUG] startGoogleAuth - Token:', token ? `${token.substring(0, 20)}...` : 'NULL');
       
-      const response = await fetch('http://localhost:3001/api/v1/analytics/auth/google', {
+      const response = await fetch(API_ENDPOINTS.ANALYTICS_AUTH, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -193,7 +194,7 @@ const Analytics = () => {
     setLoading(true);
     try {
       const token = getToken();
-              const response = await fetch('http://localhost:3001/api/v1/analytics/accounts', {
+              const response = await fetch(API_ENDPOINTS.ANALYTICS_ACCOUNTS, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -222,7 +223,7 @@ const Analytics = () => {
     setLoading(true);
     try {
       const token = getToken();
-              const response = await fetch(`http://localhost:3001/api/v1/analytics/accounts/${accountId}/properties`, {
+              const response = await fetch(`${API_ENDPOINTS.ANALYTICS_ACCOUNTS}/${accountId}/properties`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -252,7 +253,7 @@ const Analytics = () => {
     setLoading(true);
     try {
       const token = getToken();
-      const response = await fetch('http://localhost:3001/api/v1/analytics/selection', {
+      const response = await fetch(API_ENDPOINTS.ANALYTICS_SELECTION, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -287,7 +288,7 @@ const Analytics = () => {
     setLoading(true);
     try {
       const token = getToken();
-              const response = await fetch('http://localhost:3001/api/v1/analytics/dashboard-data', {
+              const response = await fetch(API_ENDPOINTS.ANALYTICS_DASHBOARD, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -315,7 +316,7 @@ const Analytics = () => {
   const logout = async () => {
     try {
       const token = getToken();
-      await fetch('http://localhost:3001/api/v1/analytics/auth/logout', {
+      await fetch(API_ENDPOINTS.ANALYTICS_LOGOUT, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
