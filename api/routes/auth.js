@@ -13,14 +13,23 @@ module.exports = (db) => {
     // POST /auth/register - Registro de novo tenant
     router.post('/register', async (req, res) => {
         try {
-            const { company_name, email, password } = req.body;
+            const { company_name, email, password, invite_code } = req.body;
 
             // Validações
-            if (!company_name || !email || !password) {
+            if (!company_name || !email || !password || !invite_code) {
                 return res.status(400).json({
                     success: false,
                     error: 'Todos os campos são obrigatórios',
-                    details: 'company_name, email e password são necessários'
+                    details: 'company_name, email, password e invite_code são necessários'
+                });
+            }
+
+            // Validar código de convite
+            if (invite_code !== 'KKJJAJBKJBSA89321B') {
+                return res.status(403).json({
+                    success: false,
+                    error: 'Código de convite inválido',
+                    details: 'Entre em contato para obter um código válido'
                 });
             }
 

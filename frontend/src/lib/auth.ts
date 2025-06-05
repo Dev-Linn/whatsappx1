@@ -29,6 +29,7 @@ export interface RegisterData {
   company_name: string;
   email: string;
   password: string;
+  invite_code: string;
 }
 
 export interface LoginData {

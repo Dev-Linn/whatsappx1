@@ -22,6 +22,7 @@ const registerSchema = z.object({
     .regex(/[a-z]/, 'Senha deve conter pelo menos 1 letra minúscula')
     .regex(/\d/, 'Senha deve conter pelo menos 1 número'),
   confirmPassword: z.string(),
+  invite_code: z.string().min(1, 'Código de convite é obrigatório'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Senhas não coincidem',
   path: ['confirmPassword'],
@@ -61,6 +62,7 @@ const Register: React.FC = () => {
         company_name: data.company_name,
         email: data.email,
         password: data.password,
+        invite_code: data.invite_code,
       });
       contextLogin(response.data.tenant);
       toast.success('Conta criada com sucesso!');
@@ -228,6 +230,23 @@ const Register: React.FC = () => {
                 </div>
                 {errors.confirmPassword && (
                   <p className="text-sm text-red-400">{errors.confirmPassword.message}</p>
+                )}
+              </div>
+
+              {/* Código de Convite */}
+              <div className="space-y-2">
+                <Label htmlFor="invite_code" className="text-gray-300">
+                  Código de Convite
+                </Label>
+                <Input
+                  id="invite_code"
+                  type="text"
+                  placeholder="Digite o código de convite"
+                  className="bg-gray-700 border-gray-600 text-white placeholder-gray-400"
+                  {...register('invite_code')}
+                />
+                {errors.invite_code && (
+                  <p className="text-sm text-red-400">{errors.invite_code.message}</p>
                 )}
               </div>
 
