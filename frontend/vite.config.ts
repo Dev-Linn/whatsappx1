@@ -16,6 +16,15 @@ export default defineConfig(({ mode }) => ({
       }
     }
   },
+  preview: {
+    host: "0.0.0.0",
+    port: 80,
+    allowedHosts: [
+      'lucrogourmet.shop',
+      'www.lucrogourmet.shop',
+      '159.223.164.124'
+    ]
+  },
   plugins: [
     react(),
     mode === 'development' &&
