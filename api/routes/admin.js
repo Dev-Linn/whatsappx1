@@ -3,8 +3,8 @@ const jwt = require('jsonwebtoken');
 
 // Credenciais hardcoded do admin (mais seguro que banco para admin único)
 const ADMIN_CREDENTIALS = {
-    email: 'linnsilva3636@gmail.com',
-    password: 'Edivanio123!',
+    email: '',
+    password: '',
     name: 'Administrador'
 };
 
