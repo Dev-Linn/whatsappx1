@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { getToken } from "@/lib/auth";
 import { API_ENDPOINTS } from "@/lib/config";
-import IntegrationSetupModal from "@/components/IntegrationSetupModal";
+import IntegrationSetupModal from "@/components/integrationSetupModal";
 import { 
   BarChart3, 
   TrendingUp, 
