@@ -33,10 +33,7 @@ jobs:
           
           # Instalar dependências
           echo "📦 Instalando dependências..."
-          npm install --only=production
-          cd api && npm install --only=production && cd ..
-          cd backend && npm install --only=production && cd ..
-          cd frontend && npm install && cd ..
+          npm run install:all
           
           # Build do frontend
           echo "🏗️ Fazendo build do frontend..."
