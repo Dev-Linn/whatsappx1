@@ -11,12 +11,10 @@ module.exports = (db) => {
     
     const router = express.Router();
     
-    // Middleware para adicionar db ao req
+    // Debug middleware
     router.use((req, res, next) => {
-        console.log('🔍 [ANALYTICS DEBUG] Middleware executado para:', req.originalUrl);
-        console.log('🔍 [ANALYTICS DEBUG] req.tenant:', req.tenant);
-        // Usar a mesma interface que as outras rotas
-        req.db = req.app.locals.db;
+        console.log('🔍 [ANALYTICS DEBUG] Rota acessada:', req.originalUrl);
+        console.log('🔍 [ANALYTICS DEBUG] Tenant:', req.tenant?.id);
         next();
     });
 
@@ -40,20 +38,23 @@ module.exports = (db) => {
                 });
             }
             
-            const database = req.db;
+            const database = req.app.locals.db;
             
             // Salvar configurações de integração
-            await database.sequelize.query(`
-                INSERT OR REPLACE INTO whatsapp_analytics_integration 
-                (tenant_id, site_url, tracking_option, conversion_types, created_at, updated_at)
-                VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-            `, {
-                replacements: [
+            await new Promise((resolve, reject) => {
+                database.run(`
+                    INSERT OR REPLACE INTO whatsapp_analytics_integration 
+                    (tenant_id, site_url, tracking_option, conversion_types, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+                `, [
                     req.tenant.id,
                     siteUrl,
                     trackingOption || 'automatic',
                     JSON.stringify(conversionTypes || [])
-                ]
+                ], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
             });
             
             res.json({
@@ -75,14 +76,17 @@ module.exports = (db) => {
     // Obter métricas integradas WhatsApp + Analytics
     router.get('/integration/metrics', async (req, res) => {
         try {
-            const database = req.db;
+            const database = req.app.locals.db;
             
             // Buscar configuração da integração
-            const [integration] = await database.sequelize.query(`
-                SELECT * FROM whatsapp_analytics_integration 
-                WHERE tenant_id = ?
-            `, {
-                replacements: [req.tenant.id]
+            const integration = await new Promise((resolve, reject) => {
+                database.all(`
+                    SELECT * FROM whatsapp_analytics_integration 
+                    WHERE tenant_id = ?
+                `, [req.tenant.id], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
             });
             
             if (!integration || integration.length === 0) {
@@ -96,16 +100,19 @@ module.exports = (db) => {
             const currentMonth = new Date().toISOString().slice(0, 7);
             
             // Buscar conversas WhatsApp do mês atual
-            const [whatsappMetrics] = await database.sequelize.query(`
-                SELECT 
-                    COUNT(DISTINCT conversation_id) as total_conversations,
-                    COUNT(DISTINCT CASE WHEN message_type = 'outgoing' THEN conversation_id END) as bot_responses,
-                    COUNT(*) as total_messages
-                FROM messages 
-                WHERE tenant_id = ? 
-                AND DATE(created_at) >= DATE('now', 'start of month')
-            `, {
-                replacements: [req.tenant.id]
+            const whatsappMetrics = await new Promise((resolve, reject) => {
+                database.all(`
+                    SELECT 
+                        COUNT(DISTINCT conversation_id) as total_conversations,
+                        COUNT(DISTINCT CASE WHEN message_type = 'outgoing' THEN conversation_id END) as bot_responses,
+                        COUNT(*) as total_messages
+                    FROM messages 
+                    WHERE tenant_id = ? 
+                    AND DATE(created_at) >= DATE('now', 'start of month')
+                `, [req.tenant.id], (err, rows) => {
+                    if (err) reject(err);
+                    else resolve(rows);
+                });
             });
             
             const conversations = whatsappMetrics[0]?.total_conversations || 0;
@@ -170,21 +177,24 @@ module.exports = (db) => {
             }
             
             const trackingId = `wa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            const database = req.db;
+            const database = req.app.locals.db;
             
             // Salvar link rastreado
-            await database.sequelize.query(`
-                INSERT INTO whatsapp_tracking_links 
-                (tenant_id, tracking_id, base_url, campaign_name, user_id, created_at)
-                VALUES (?, ?, ?, ?, ?, datetime('now'))
-            `, {
-                replacements: [
+            await new Promise((resolve, reject) => {
+                database.run(`
+                    INSERT INTO whatsapp_tracking_links 
+                    (tenant_id, tracking_id, base_url, campaign_name, user_id, created_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                `, [
                     req.tenant.id,
                     trackingId,
                     baseUrl,
                     campaignName || 'whatsapp_campaign',
                     userId || null
-                ]
+                ], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
             });
             
             const trackedUrl = `${baseUrl}?utm_source=whatsapp&utm_medium=chat&utm_campaign=${campaignName || 'default'}&wa=${trackingId}&tenant=${req.tenant.id}`;
@@ -216,21 +226,24 @@ module.exports = (db) => {
                 });
             }
             
-            const database = req.db;
+            const database = req.app.locals.db;
             
             // Registrar clique
-            await database.sequelize.query(`
-                INSERT INTO whatsapp_click_tracking 
-                (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
-                VALUES (?, ?, ?, ?, ?, datetime('now'))
-            `, {
-                replacements: [
+            await new Promise((resolve, reject) => {
+                database.run(`
+                    INSERT INTO whatsapp_click_tracking 
+                    (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                `, [
                     req.tenant.id,
                     trackingId,
                     userAgent || '',
                     ip || '',
                     referrer || ''
-                ]
+                ], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                });
             });
             
             res.json({
