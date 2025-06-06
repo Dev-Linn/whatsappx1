@@ -1,0 +1,54 @@
+name: Auto Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Permite executar manualmente
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🚀 Deploy to VPS
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "🔄 Iniciando deploy automático..."
+          cd /root/whatsappx1
+          
+          # Fazer backup do .env
+          cp backend/.env /tmp/backup.env 2>/dev/null || true
+          
+          # Atualizar código
+          git fetch --all
+          git reset --hard origin/main
+          git pull origin main
+          
+          # Restaurar .env
+          cp /tmp/backup.env backend/.env 2>/dev/null || true
+          
+          # Instalar dependências
+          echo "📦 Instalando dependências..."
+          npm install --only=production
+          cd api && npm install --only=production && cd ..
+          cd backend && npm install --only=production && cd ..
+          cd frontend && npm install && cd ..
+          
+          # Build do frontend
+          echo "🏗️ Fazendo build do frontend..."
+          cd frontend && npm run build && cd ..
+          
+          # Reiniciar serviços
+          echo "🔄 Reiniciando serviços..."
+          pm2 restart all
+          
+          # Verificar status
+          pm2 status
+          
+          echo "✅ Deploy concluído com sucesso!"
+          echo "📊 Status dos serviços:"
+          pm2 list 
