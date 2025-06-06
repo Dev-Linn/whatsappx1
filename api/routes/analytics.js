@@ -15,7 +15,18 @@ module.exports = (db) => {
     router.use((req, res, next) => {
         console.log('🔍 [ANALYTICS DEBUG] Rota acessada:', req.originalUrl);
         console.log('🔍 [ANALYTICS DEBUG] Tenant:', req.tenant?.id);
+        console.log('🔍 [ANALYTICS DEBUG] Headers auth:', req.headers['authorization'] ? 'Presente' : 'Ausente');
         next();
+    });
+
+    // Endpoint de teste de autenticação
+    router.get('/auth/test', (req, res) => {
+        res.json({
+            success: true,
+            message: 'Autenticação funcionando!',
+            tenant: req.tenant,
+            timestamp: new Date().toISOString()
+        });
     });
 
     // Inicializar cliente OAuth2
@@ -158,8 +169,11 @@ module.exports = (db) => {
         }
     });
 
-    // Gerar link rastreado para WhatsApp
+    // Gerar link rastreado para WhatsApp  
     router.post('/integration/generate-link', async (req, res) => {
+        console.log('🔗 [GENERATE LINK] Iniciando geração de link...');
+        console.log('🔗 [GENERATE LINK] Tenant ID:', req.tenant?.id);
+        console.log('🔗 [GENERATE LINK] Body:', JSON.stringify(req.body, null, 2));
         try {
             const { baseUrl, campaignName, userId } = req.body;
             
