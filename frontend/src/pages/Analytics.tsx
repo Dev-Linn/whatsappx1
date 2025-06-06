@@ -421,10 +421,24 @@ const Analytics = () => {
   if (step === 'auth') {
     return (
       <div className="p-6 max-w-4xl mx-auto">
+        {/* Header com botão de integração */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white mb-2">Google Analytics</h1>
+            <p className="text-gray-400">Conecte sua conta para visualizar dados de analytics</p>
+          </div>
+          <Button 
+            onClick={() => setShowIntegrationModal(true)}
+            variant="outline"
+            className="border-green-600 text-green-400 hover:bg-green-900/20"
+          >
+            <Link2 className="h-4 w-4 mr-2" />
+            Integrar WhatsApp
+          </Button>
+        </div>
+
         <div className="text-center mb-8">
           <BarChart3 className="h-16 w-16 mx-auto mb-4 text-green-600" />
-          <h1 className="text-3xl font-bold text-white mb-2">Google Analytics</h1>
-          <p className="text-gray-400">Conecte sua conta para visualizar dados de analytics</p>
         </div>
 
         <Card className="bg-gray-800 border-gray-700">
@@ -454,6 +468,19 @@ const Analytics = () => {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Modal de Integração */}
+        <IntegrationSetupModal
+          isOpen={showIntegrationModal}
+          onClose={() => setShowIntegrationModal(false)}
+          onComplete={() => {
+            toast({
+              title: "🎉 Integração Configurada!",
+              description: "WhatsApp e Analytics agora estão conectados. Você pode começar a rastrear usuários!"
+            });
+            setShowIntegrationModal(false);
+          }}
+        />
       </div>
     );
   }
@@ -461,9 +488,20 @@ const Analytics = () => {
   if (step === 'account') {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">Selecionar Conta</h1>
-          <p className="text-gray-400">Escolha a conta do Google Analytics que deseja usar</p>
+        {/* Header com botão de integração */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">Selecionar Conta</h1>
+            <p className="text-gray-400">Escolha a conta do Google Analytics que deseja usar</p>
+          </div>
+          <Button 
+            onClick={() => setShowIntegrationModal(true)}
+            variant="outline"
+            className="border-green-600 text-green-400 hover:bg-green-900/20"
+          >
+            <Link2 className="h-4 w-4 mr-2" />
+            Integrar WhatsApp
+          </Button>
         </div>
 
         <div className="grid gap-4">
@@ -493,6 +531,19 @@ const Analytics = () => {
             );
           })}
         </div>
+
+        {/* Modal de Integração */}
+        <IntegrationSetupModal
+          isOpen={showIntegrationModal}
+          onClose={() => setShowIntegrationModal(false)}
+          onComplete={() => {
+            toast({
+              title: "🎉 Integração Configurada!",
+              description: "WhatsApp e Analytics agora estão conectados. Você pode começar a rastrear usuários!"
+            });
+            setShowIntegrationModal(false);
+          }}
+        />
       </div>
     );
   }
@@ -500,9 +551,20 @@ const Analytics = () => {
   if (step === 'property') {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">Selecionar Propriedade</h1>
-          <p className="text-gray-400">Escolha a propriedade GA4 que deseja analisar</p>
+        {/* Header com botão de integração */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">Selecionar Propriedade</h1>
+            <p className="text-gray-400">Escolha a propriedade GA4 que deseja analisar</p>
+          </div>
+          <Button 
+            onClick={() => setShowIntegrationModal(true)}
+            variant="outline"
+            className="border-green-600 text-green-400 hover:bg-green-900/20"
+          >
+            <Link2 className="h-4 w-4 mr-2" />
+            Integrar WhatsApp
+          </Button>
         </div>
 
         <div className="grid gap-4">
@@ -550,6 +612,19 @@ const Analytics = () => {
             ← Voltar às Contas
           </Button>
         </div>
+
+        {/* Modal de Integração */}
+        <IntegrationSetupModal
+          isOpen={showIntegrationModal}
+          onClose={() => setShowIntegrationModal(false)}
+          onComplete={() => {
+            toast({
+              title: "🎉 Integração Configurada!",
+              description: "WhatsApp e Analytics agora estão conectados. Você pode começar a rastrear usuários!"
+            });
+            setShowIntegrationModal(false);
+          }}
+        />
       </div>
     );
   }
