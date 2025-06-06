@@ -9,7 +9,7 @@ const {
     authenticateToken 
 } = require('../middleware/auth');
 
-module.exports = (db) => {
+module.exports = (db) => { 
     // POST /auth/register - Registro de novo tenant
     router.post('/register', async (req, res) => {
         try {
