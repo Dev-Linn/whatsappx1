@@ -44,9 +44,72 @@ const GoogleCallback = () => {
         const token = getToken();
         console.log('Token JWT:', token ? 'Presente' : 'Ausente');
         
+        // Decodificar e validar consistência entre state e token
+        let stateData = null;
+        let tokenPayload = null;
+        let tenantMismatch = false;
+        
+        if (state) {
+          try {
+            stateData = JSON.parse(atob(state));
+            console.log('🔍 [STATE] Tenant do Google Auth:', stateData);
+          } catch (e) {
+            console.log('❌ [STATE] Erro ao decodificar state:', e);
+          }
+        }
+        
+        if (token) {
+          try {
+            tokenPayload = JSON.parse(atob(token.split('.')[1]));
+            console.log('🔍 [TOKEN] Payload do JWT:', tokenPayload);
+            console.log('🔍 [TOKEN] Tenant ID no token:', tokenPayload.tenantId || tokenPayload.tenant_id);
+            console.log('🔍 [TOKEN] Email no token:', tokenPayload.email);
+            
+            // Verificar se há conflito de tenant
+            if (stateData && tokenPayload) {
+              const stateTenantId = stateData.tenantId;
+              const tokenTenantId = tokenPayload.tenantId || tokenPayload.tenant_id;
+              
+              if (stateTenantId !== tokenTenantId) {
+                tenantMismatch = true;
+                console.log('🚨 [MISMATCH] Conflito de tenant detectado!');
+                console.log('🚨 [MISMATCH] State tenant:', stateTenantId);
+                console.log('🚨 [MISMATCH] Token tenant:', tokenTenantId);
+              }
+            }
+          } catch (e) {
+            console.log('❌ [TOKEN] Erro ao decodificar JWT:', e);
+          }
+        }
+        
+        // Se há conflito de tenant, redirecionar para login com mensagem específica
+        if (tenantMismatch) {
+          console.log('🔄 [REDIRECT] Redirecionando para login devido a conflito de tenant');
+          
+          toast({
+            variant: "destructive",
+            title: "Conflito de Sessão",
+            description: "Detectamos um conflito entre sessões. Por favor, faça login novamente."
+          });
+          
+          // Limpar localStorage e redirecionar
+          localStorage.clear();
+          
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'ANALYTICS_ERROR',
+              error: 'Conflito de tenant - faça login novamente'
+            }, window.location.origin);
+            window.close();
+          } else {
+            window.location.href = '/login';
+          }
+          return;
+        }
+        
         if (!token) {
           throw new Error('Token de autenticação não encontrado. Faça login novamente.');
-        }//s
+        }
 
         // Enviar código para a API
         const response = await fetch(API_ENDPOINTS.ANALYTICS_CALLBACK, {
@@ -61,6 +124,14 @@ const GoogleCallback = () => {
         console.log('Response status:', response.status);
         const responseData = await response.json();
         console.log('Response data:', responseData);
+
+        // Se erro 403, mostrar detalhes
+        if (response.status === 403) {
+          console.log('🚨 [403 ERROR] Erro de permissão detalhado:');
+          console.log('🚨 [403 ERROR] Message:', responseData.message || responseData.error);
+          console.log('🚨 [403 ERROR] Details:', responseData.details);
+          console.log('🚨 [403 ERROR] Full response:', responseData);
+        }
 
         if (response.ok) {
           toast({

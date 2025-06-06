@@ -22,7 +22,8 @@ import {
   Smartphone,
   Monitor,
   Tablet,
-  Link2
+  Link2,
+  MessageSquare
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -155,6 +156,30 @@ const Analytics = () => {
               title: "Sucesso!",
               description: "Google Analytics conectado com sucesso!"
             });
+          } else if (event.data.type === 'ANALYTICS_ERROR') {
+            // Erro na popup
+            popup?.close();
+            window.removeEventListener('message', messageListener);
+            clearInterval(checkClosed);
+            
+            // Se é conflito de tenant, mostrar mensagem específica e redirecionar
+            if (event.data.error?.includes('conflito de tenant') || event.data.error?.includes('Conflito de tenant')) {
+              toast({
+                variant: "destructive",
+                title: "Conflito de Sessão Detectado",
+                description: "Redirecionando para login para resolver o conflito..."
+              });
+              
+              setTimeout(() => {
+                window.location.href = '/login';
+              }, 2000);
+            } else {
+              toast({
+                variant: "destructive",
+                title: "Erro na Autenticação",
+                description: event.data.error || 'Erro ao conectar com Google Analytics'
+              });
+            }
           }
         };
 
@@ -572,11 +597,45 @@ const Analytics = () => {
       </div>
 
       {analyticsData.length === 0 ? (
-        <Alert className="bg-yellow-900/20 border-yellow-600">
-          <AlertDescription className="text-yellow-200">
-            Nenhum dado encontrado para o período selecionado.
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-6">
+          <Alert className="bg-yellow-900/20 border-yellow-600">
+            <AlertDescription className="text-yellow-200">
+              Nenhum dado encontrado para o período selecionado.
+            </AlertDescription>
+          </Alert>
+          
+          {/* Card de Integração WhatsApp quando não há dados */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <MessageSquare className="h-5 w-5 mr-2 text-green-500" />
+                Integrar WhatsApp com Analytics
+              </CardTitle>
+              <CardDescription>
+                Conecte seus dados do WhatsApp com Google Analytics para ter uma visão unificada do ROI
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-300 mb-2">
+                    🚀 Rastreie usuários desde o primeiro contato no WhatsApp até a conversão final
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Configure links rastreados, UTMs automáticos e dashboards unificados
+                  </p>
+                </div>
+                <Button 
+                  onClick={() => setShowIntegrationModal(true)}
+                  className="bg-green-600 hover:bg-green-700 ml-4"
+                >
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Configurar Integração
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <>
           {/* Métricas Principais */}
