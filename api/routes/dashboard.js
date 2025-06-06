@@ -20,7 +20,7 @@ module.exports = (db) => {
             const tenantId = req.tenant?.id;
             const stats = await db.getDashboardStats(tenantId);
             res.success(stats.overview, 'Overview carregado');
-        } catch (error) {
+        } catch (error) { 
             console.error('Erro ao carregar overview:', error);
             res.error('Erro ao carregar overview', 500);
         }
