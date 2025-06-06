@@ -46,7 +46,7 @@ const GoogleCallback = () => {
         
         if (!token) {
           throw new Error('Token de autenticação não encontrado. Faça login novamente.');
-        }
+        }//s
 
         // Enviar código para a API
         const response = await fetch(API_ENDPOINTS.ANALYTICS_CALLBACK, {
