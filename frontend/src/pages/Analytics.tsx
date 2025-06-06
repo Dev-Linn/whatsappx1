@@ -5,8 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { getToken } from "@/lib/auth";
-import { API_ENDPOINTS } from "@/lib/config";
-import IntegrationSetupModal from "@/components/integrationSetupModal";
+import { API_ENDPOINTS, API_BASE_URL } from "@/lib/config";
+import IntegrationSetupModal from "@/components/IntegrationSetupModal";
+import WhatsAppLinkGenerator from "@/components/WhatsAppLinkGenerator";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -20,10 +21,11 @@ import {
   LogOut,
   Globe,
   Smartphone,
-  Monitor,
+  Monitor, 
   Tablet,
   Link2,
-  MessageSquare
+  MessageSquare,
+  Rocket
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -50,7 +52,7 @@ interface AnalyticsData {
 
 interface Account {
   name: string;
-  displayName: string;
+  displayName: string; 
 }
 
 interface Property {
@@ -81,11 +83,14 @@ const Analytics = () => {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'auth' | 'account' | 'property' | 'dashboard'>('auth');
   const [showIntegrationModal, setShowIntegrationModal] = useState(false);
+  const [integrationMetrics, setIntegrationMetrics] = useState(null);
+  const [isIntegrationConfigured, setIsIntegrationConfigured] = useState(false);
   const { toast } = useToast();
 
   // Verificar status de autenticação ao carregar
   useEffect(() => {
     checkAuthStatus();
+    checkIntegrationStatus();
   }, []);
 
   const checkAuthStatus = async () => {
@@ -118,6 +123,26 @@ const Analytics = () => {
     } catch (error) {
       console.error('Erro ao verificar status:', error);
       setStep('auth');
+    }
+  };
+
+  const checkIntegrationStatus = async () => {
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/analytics/integration/metrics`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const metrics = await response.json();
+        setIntegrationMetrics(metrics);
+        setIsIntegrationConfigured(metrics.integrated);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar integração:', error);
     }
   };
 
@@ -643,14 +668,17 @@ const Analytics = () => {
           )}
         </div>
         <div className="flex gap-2">
-          <Button 
-            onClick={() => setShowIntegrationModal(true)}
-            variant="outline"
-            className="border-green-600 text-green-400 hover:bg-green-900/20"
-          >
-            <Link2 className="h-4 w-4 mr-2" />
-            Integrar WhatsApp
-          </Button>
+          {!isIntegrationConfigured && (
+            <Button 
+              onClick={() => setShowIntegrationModal(true)}
+              variant="outline"
+              className="border-green-600 text-green-400 hover:bg-green-900/20"
+            >
+              <Link2 className="h-4 w-4 mr-2" />
+              Integrar WhatsApp
+            </Button>
+          )}
+          <WhatsAppLinkGenerator isIntegrationConfigured={isIntegrationConfigured} />
           <Button 
             onClick={loadDashboardData}
             disabled={loading}
@@ -707,6 +735,120 @@ const Analytics = () => {
                   <Link2 className="h-4 w-4 mr-2" />
                   Configurar Integração
                 </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Seção de Métricas WhatsApp + Analytics */}
+          <Card className={`${isIntegrationConfigured ? 'bg-gradient-to-r from-green-900/20 to-blue-900/20 border-green-600' : 'bg-gradient-to-r from-gray-900/20 to-gray-800/20 border-gray-600'}`}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2 text-green-500" />
+                📊 {isIntegrationConfigured ? 'Métricas Integradas WhatsApp + Site' : 'Simulação: Métricas Integradas WhatsApp + Site'}
+              </CardTitle>
+              <CardDescription>
+                {isIntegrationConfigured 
+                  ? 'Dados reais da sua integração WhatsApp + Analytics'
+                  : 'Veja como ficarão suas métricas após configurar a integração'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="text-center p-4 bg-gray-800 rounded-lg border border-gray-700">
+                  <div className="text-2xl font-bold text-green-400 mb-1">
+                    {isIntegrationConfigured && integrationMetrics ? 
+                      integrationMetrics.whatsapp?.conversations || 0 : 847
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">Conversas WhatsApp</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {isIntegrationConfigured && integrationMetrics ? 
+                      `↓ ${integrationMetrics.whatsapp?.clicks || 0} cliques no site (${integrationMetrics.whatsapp?.click_rate || 0}%)` :
+                      '↓ 634 cliques no site (74.9%)'
+                    }
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-gray-800 rounded-lg border border-gray-700">
+                  <div className="text-2xl font-bold text-blue-400 mb-1">
+                    {isIntegrationConfigured && integrationMetrics ? 
+                      `${integrationMetrics.analytics?.conversion_rate || 0}%` : '23.1%'
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">Taxa de Conversão</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {isIntegrationConfigured && integrationMetrics ? 
+                      `${integrationMetrics.analytics?.conversions || 0} conversões de ${integrationMetrics.analytics?.sessions || 0} visitas` :
+                      '146 conversões de 634 visitas'
+                    }
+                  </div>
+                </div>
+                <div className="text-center p-4 bg-gray-800 rounded-lg border border-gray-700">
+                  <div className="text-2xl font-bold text-yellow-400 mb-1">
+                    {isIntegrationConfigured && integrationMetrics ? 
+                      `R$ ${Number(integrationMetrics.revenue?.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 
+                      'R$ 12.340'
+                    }
+                  </div>
+                  <div className="text-sm text-gray-400">Receita Rastreada</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    {isIntegrationConfigured && integrationMetrics ? 
+                      `ROI médio: ${integrationMetrics.revenue?.roi || 0}x` : 
+                      'ROI médio: 4.2x'
+                    }
+                  </div>
+                </div>
+              </div>
+
+              {/* Funil de Conversão Simulado */}
+              <div className="space-y-3">
+                <h4 className="text-white font-medium flex items-center">
+                  <Rocket className="h-4 w-4 mr-2" />
+                  🎯 Funil de Conversão Completo:
+                </h4>
+                
+                <div className="space-y-2">
+                  {(isIntegrationConfigured && integrationMetrics?.funnel ? integrationMetrics.funnel : [
+                    { stage: 'WhatsApp Conversations', count: 847, rate: 100 },
+                    { stage: 'Site Clicks', count: 634, rate: 74.9 },
+                    { stage: 'Engaged Sessions', count: 312, rate: 49.2 },
+                    { stage: 'Conversions', count: 146, rate: 23.1 }
+                  ]).map((item, index) => (
+                    <div key={index} className={`flex items-center justify-between p-3 bg-gray-800 rounded border ${
+                      index === 3 ? 'border-green-600' : 'border-gray-700'
+                    }`}>
+                      <div className="flex items-center space-x-3">
+                        {index === 0 && <MessageSquare className="h-4 w-4 text-green-500" />}
+                        {index === 1 && <ExternalLink className="h-4 w-4 text-blue-500" />}
+                        {index === 2 && <Globe className="h-4 w-4 text-purple-500" />}
+                        {index === 3 && <DollarSign className="h-4 w-4 text-yellow-500" />}
+                        <span className={`text-white text-sm ${index === 3 ? 'font-medium' : ''}`}>
+                          {index + 1}. {item.stage}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className={`font-${index === 3 ? 'bold' : 'medium'} ${
+                          index === 0 ? 'text-green-400' : 
+                          index === 1 ? 'text-blue-400' : 
+                          index === 2 ? 'text-purple-400' : 'text-yellow-400'
+                        }`}>
+                          {item.count.toLocaleString('pt-BR')}
+                        </div>
+                        <div className={`text-xs ${
+                          index === 3 ? 'text-green-400' : 'text-gray-400'
+                        }`}>
+                          {item.rate}%
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600 rounded">
+                  <p className="text-yellow-200 text-sm">
+                    💡 <strong>Insight:</strong> Com essa integração, você saberia que 23 de cada 100 pessoas que clicam nos seus links do WhatsApp fazem uma compra!
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -856,6 +998,8 @@ const Analytics = () => {
             description: "WhatsApp e Analytics agora estão conectados. Você pode começar a rastrear usuários!"
           });
           setShowIntegrationModal(false);
+          // Recarregar status de integração
+          checkIntegrationStatus();
         }}
       />
     </div>

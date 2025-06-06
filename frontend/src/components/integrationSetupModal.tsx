@@ -19,7 +19,8 @@ import {
   MessageSquare,
   TrendingUp,
   Settings,
-  Rocket
+  Rocket,
+  Monitor
 } from "lucide-react";
 
 interface IntegrationSetupModalProps {
@@ -60,17 +61,46 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
 
   const handleFinish = async () => {
     setIsLoading(true);
-    // Simular configuração
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
     
-    toast({
-      title: "🎉 Integração Configurada!",
-      description: "WhatsApp + Analytics conectados com sucesso!"
-    });
-    
-    onComplete();
-    onClose();
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch('/api/v1/analytics/integration/setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          siteUrl: siteUrl || 'https://exemplo.com.br',
+          trackingOption: trackingOption,
+          conversionTypes: ['visits', 'time', 'products', 'purchases']
+        })
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        toast({
+          title: "🎉 Integração Configurada!",
+          description: "WhatsApp + Analytics conectados com sucesso!"
+        });
+        
+        onComplete();
+        onClose();
+      } else {
+        const error = await response.json();
+        throw new Error(error.message || 'Erro ao configurar integração');
+      }
+    } catch (error) {
+      console.error('Erro ao configurar integração:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro na Configuração",
+        description: error.message || "Não foi possível configurar a integração"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderStep = () => {
@@ -120,6 +150,32 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
                 </CardContent>
               </Card>
             </div>
+
+            {/* Métricas Reais de Exemplo */}
+            <div className="mt-6 p-4 bg-green-900/20 border border-green-600 rounded-lg">
+              <h4 className="text-green-400 font-medium mb-3 flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                📊 Exemplo de Resultados Reais:
+              </h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="text-white font-bold text-lg">847</div>
+                  <div className="text-gray-400 text-xs">Cliques WA→Site</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-white font-bold text-lg">23%</div>
+                  <div className="text-gray-400 text-xs">Taxa Conversão</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-white font-bold text-lg">R$ 12.340</div>
+                  <div className="text-gray-400 text-xs">Receita Rastreada</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-white font-bold text-lg">4.2x</div>
+                  <div className="text-gray-400 text-xs">ROI Médio</div>
+                </div>
+              </div>
+            </div>
           </div>
         );
 
@@ -137,27 +193,31 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
               {[
                 {
                   step: "1️⃣",
-                  title: "Usuário fala no WhatsApp",
-                  description: '"Oi, quero saber sobre o produto"',
-                  icon: <MessageSquare className="h-5 w-5 text-green-500" />
+                  title: "Cliente conversa no WhatsApp",
+                  description: '"Oi, quero ver os preços dos produtos"',
+                  icon: <MessageSquare className="h-5 w-5 text-green-500" />,
+                  metrics: "847 conversas/mês"
                 },
                 {
                   step: "2️⃣",
-                  title: "Bot envia link especial",
-                  description: '"Veja aqui: site.com?wa=user123"',
-                  icon: <ExternalLink className="h-5 w-5 text-blue-500" />
+                  title: "Bot envia link rastreado",
+                  description: '"Catálogo: loja.com.br?utm_source=whatsapp&wa=5511987654321"',
+                  icon: <ExternalLink className="h-5 w-5 text-blue-500" />,
+                  metrics: "634 cliques únicos"
                 },
                 {
                   step: "3️⃣",
-                  title: "Analytics captura origem",
-                  description: '"Visitante veio do WhatsApp user123"',
-                  icon: <TrendingUp className="h-5 w-5 text-purple-500" />
+                  title: "Google Analytics registra origem",
+                  description: 'Sessão: "WhatsApp → João Silva → Produto X"',
+                  icon: <TrendingUp className="h-5 w-5 text-purple-500" />,
+                  metrics: "23% taxa conversão"
                 },
                 {
                   step: "4️⃣",
-                  title: "Dashboard mostra tudo junto",
-                  description: '"João: WA há 2h → Site agora"',
-                  icon: <Settings className="h-5 w-5 text-yellow-500" />
+                  title: "Dashboard unifica dados",
+                  description: 'ROI: "João: R$ 250 gasto → R$ 1.200 faturado"',
+                  icon: <Settings className="h-5 w-5 text-yellow-500" />,
+                  metrics: "ROI médio: 4.2x"
                 }
               ].map((item, index) => (
                 <Card key={index} className="bg-gray-800 border-gray-700">
@@ -165,9 +225,14 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
                     <div className="flex items-start space-x-3">
                       <div className="text-2xl">{item.step}</div>
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2 mb-1">
-                          {item.icon}
-                          <h4 className="text-white font-medium">{item.title}</h4>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center space-x-2">
+                            {item.icon}
+                            <h4 className="text-white font-medium">{item.title}</h4>
+                          </div>
+                          <Badge className="bg-green-600 text-xs">
+                            {item.metrics}
+                          </Badge>
                         </div>
                         <p className="text-gray-400 text-sm italic">{item.description}</p>
                       </div>
@@ -462,13 +527,58 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
             </Card>
 
             <div className="bg-gray-900 p-4 rounded border border-gray-700">
-              <h4 className="text-white font-medium mb-2">📈 Em alguns minutos você verá:</h4>
-              <ul className="text-gray-400 text-sm space-y-1">
-                <li>• Usuários WA que visitaram o site</li>
-                <li>• Páginas mais acessadas por lead</li>
-                <li>• ROI real das suas conversas</li>
-                <li>• Funil completo de conversão</li>
-              </ul>
+              <h4 className="text-white font-medium mb-3 flex items-center">
+                <TrendingUp className="h-4 w-4 mr-2" />
+                📈 Métricas que você vai monitorar:
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">• Conversas WA → Cliques site:</span>
+                    <span className="text-green-400 font-medium">74.9%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">• Páginas mais visitadas:</span>
+                    <span className="text-blue-400 font-medium">Top 5</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">• Tempo médio no site:</span>
+                    <span className="text-yellow-400 font-medium">4m 23s</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">• Taxa de conversão:</span>
+                    <span className="text-green-400 font-medium">23.1%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">• ROI médio por lead:</span>
+                    <span className="text-green-400 font-medium">4.2x</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-400">• Receita rastreada:</span>
+                    <span className="text-green-400 font-medium">R$ 12.3k/mês</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dashboard Preview */}
+            <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 border border-blue-600 p-4 rounded-lg">
+              <h4 className="text-blue-400 font-medium mb-3 flex items-center">
+                <Monitor className="h-4 w-4 mr-2" />
+                🎯 Preview do Dashboard Integrado:
+              </h4>
+              <div className="text-xs text-gray-300 font-mono bg-gray-900 p-3 rounded border">
+                <div className="mb-2 text-blue-400">📊 WhatsApp + Analytics Dashboard:</div>
+                <div className="space-y-1">
+                  <div>João Silva • +55 11 98765-4321 • Online há 2min</div>
+                  <div className="ml-4 text-green-400">├─ Conversou: "Quero ver os preços" (14:32)</div>
+                  <div className="ml-4 text-blue-400">├─ Clicou: loja.com.br/produtos (14:35)</div>
+                  <div className="ml-4 text-yellow-400">├─ Visualizou: 3 produtos, 4min no site</div>
+                  <div className="ml-4 text-green-400">└─ Converteu: R$ 489,90 • ROI: 3.8x</div>
+                </div>
+              </div>
             </div>
           </div>
         );
