@@ -41,20 +41,17 @@ module.exports = (db) => {
             const database = req.app.locals.db;
             
             // Salvar configurações de integração
-            await new Promise((resolve, reject) => {
-                database.run(`
-                    INSERT OR REPLACE INTO whatsapp_analytics_integration 
-                    (tenant_id, site_url, tracking_option, conversion_types, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-                `, [
+            await database.sequelize.query(`
+                INSERT OR REPLACE INTO whatsapp_analytics_integration 
+                (tenant_id, site_url, tracking_option, conversion_types, created_at, updated_at)
+                VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+            `, {
+                replacements: [
                     req.tenant.id,
                     siteUrl,
                     trackingOption || 'automatic',
                     JSON.stringify(conversionTypes || [])
-                ], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+                ]
             });
             
             res.json({
@@ -79,14 +76,12 @@ module.exports = (db) => {
             const database = req.app.locals.db;
             
             // Buscar configuração da integração
-            const integration = await new Promise((resolve, reject) => {
-                database.all(`
-                    SELECT * FROM whatsapp_analytics_integration 
-                    WHERE tenant_id = ?
-                `, [req.tenant.id], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
+            const integration = await database.sequelize.query(`
+                SELECT * FROM whatsapp_analytics_integration 
+                WHERE tenant_id = ?
+            `, {
+                replacements: [req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
             });
             
             if (!integration || integration.length === 0) {
@@ -100,19 +95,17 @@ module.exports = (db) => {
             const currentMonth = new Date().toISOString().slice(0, 7);
             
             // Buscar conversas WhatsApp do mês atual
-            const whatsappMetrics = await new Promise((resolve, reject) => {
-                database.all(`
-                    SELECT 
-                        COUNT(DISTINCT conversation_id) as total_conversations,
-                        COUNT(DISTINCT CASE WHEN message_type = 'outgoing' THEN conversation_id END) as bot_responses,
-                        COUNT(*) as total_messages
-                    FROM messages 
-                    WHERE tenant_id = ? 
-                    AND DATE(created_at) >= DATE('now', 'start of month')
-                `, [req.tenant.id], (err, rows) => {
-                    if (err) reject(err);
-                    else resolve(rows);
-                });
+            const whatsappMetrics = await database.sequelize.query(`
+                SELECT 
+                    COUNT(DISTINCT conversation_id) as total_conversations,
+                    COUNT(DISTINCT CASE WHEN is_bot = 0 THEN conversation_id END) as user_conversations,
+                    COUNT(*) as total_messages
+                FROM messages 
+                WHERE tenant_id = ? 
+                AND DATE(created_at) >= DATE('now', 'start of month')
+            `, {
+                replacements: [req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
             });
             
             const conversations = whatsappMetrics[0]?.total_conversations || 0;
@@ -180,21 +173,18 @@ module.exports = (db) => {
             const database = req.app.locals.db;
             
             // Salvar link rastreado
-            await new Promise((resolve, reject) => {
-                database.run(`
-                    INSERT INTO whatsapp_tracking_links 
-                    (tenant_id, tracking_id, base_url, campaign_name, user_id, created_at)
-                    VALUES (?, ?, ?, ?, ?, datetime('now'))
-                `, [
+            await database.sequelize.query(`
+                INSERT INTO whatsapp_tracking_links 
+                (tenant_id, tracking_id, base_url, campaign_name, user_id, created_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            `, {
+                replacements: [
                     req.tenant.id,
                     trackingId,
                     baseUrl,
                     campaignName || 'whatsapp_campaign',
                     userId || null
-                ], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+                ]
             });
             
             const trackedUrl = `${baseUrl}?utm_source=whatsapp&utm_medium=chat&utm_campaign=${campaignName || 'default'}&wa=${trackingId}&tenant=${req.tenant.id}`;
@@ -229,21 +219,18 @@ module.exports = (db) => {
             const database = req.app.locals.db;
             
             // Registrar clique
-            await new Promise((resolve, reject) => {
-                database.run(`
-                    INSERT INTO whatsapp_click_tracking 
-                    (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
-                    VALUES (?, ?, ?, ?, ?, datetime('now'))
-                `, [
+            await database.sequelize.query(`
+                INSERT INTO whatsapp_click_tracking 
+                (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
+                VALUES (?, ?, ?, ?, ?, datetime('now'))
+            `, {
+                replacements: [
                     req.tenant.id,
                     trackingId,
                     userAgent || '',
                     ip || '',
                     referrer || ''
-                ], (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                });
+                ]
             });
             
             res.json({

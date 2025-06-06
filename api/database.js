@@ -5,7 +5,7 @@ const path = require('path');
 // Configuração do SQLite (conecta ao banco principal)
 const sequelize = new Sequelize({
     dialect: 'sqlite',
-    storage: path.join(__dirname, '../backend/data/chatbot.db'),
+    storage: path.join(__dirname, '../backend/data/whatsapp.db'),
     logging: false,
     define: {
         timestamps: true,
