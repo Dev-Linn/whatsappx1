@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { getToken } from "@/lib/auth";
 import { API_ENDPOINTS } from "@/lib/config";
+import IntegrationSetupModal from "@/components/IntegrationSetupModal";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -20,7 +21,8 @@ import {
   Globe,
   Smartphone,
   Monitor,
-  Tablet
+  Tablet,
+  Link2
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -77,6 +79,7 @@ const Analytics = () => {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData[]>([]);
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState<'auth' | 'account' | 'property' | 'dashboard'>('auth');
+  const [showIntegrationModal, setShowIntegrationModal] = useState(false);
   const { toast } = useToast();
 
   // Verificar status de autenticação ao carregar
@@ -541,6 +544,14 @@ const Analytics = () => {
         </div>
         <div className="flex gap-2">
           <Button 
+            onClick={() => setShowIntegrationModal(true)}
+            variant="outline"
+            className="border-green-600 text-green-400 hover:bg-green-900/20"
+          >
+            <Link2 className="h-4 w-4 mr-2" />
+            Integrar WhatsApp
+          </Button>
+          <Button 
             onClick={loadDashboardData}
             disabled={loading}
             variant="outline"
@@ -700,6 +711,19 @@ const Analytics = () => {
           </div>
         </>
       )}
+
+      {/* Modal de Integração WhatsApp + Analytics */}
+      <IntegrationSetupModal
+        isOpen={showIntegrationModal}
+        onClose={() => setShowIntegrationModal(false)}
+        onComplete={() => {
+          toast({
+            title: "🎉 Integração Configurada!",
+            description: "WhatsApp e Analytics agora estão conectados. Você pode começar a rastrear usuários!"
+          });
+          setShowIntegrationModal(false);
+        }}
+      />
     </div>
   );
 };
