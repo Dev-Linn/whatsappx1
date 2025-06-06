@@ -366,7 +366,7 @@ module.exports = (db) => {
             });
 
             // Armazenar tokens no banco de dados por tenant
-            const database = req.db;
+            const database = req.app.locals.db;
             await database.sequelize.query(`
                 INSERT OR REPLACE INTO google_analytics_tokens 
                 (tenant_id, access_token, refresh_token, expires_at, created_at, updated_at)
@@ -399,7 +399,7 @@ module.exports = (db) => {
     // Buscar contas do Google Analytics do usuário
     router.get('/accounts', async (req, res) => {
         try {
-            const tokens = await getValidTokens(req.tenant.id, req.db);
+            const tokens = await getValidTokens(req.tenant.id, req.app.locals.db);
             if (!tokens) {
                 return res.status(401).json({
                     error: 'Não autenticado',
@@ -443,7 +443,7 @@ module.exports = (db) => {
         try {
             const { accountId } = req.params;
             
-            const tokens = await getValidTokens(req.tenant.id, req.db);
+            const tokens = await getValidTokens(req.tenant.id, req.app.locals.db);
             if (!tokens) {
                 return res.status(401).json({
                     error: 'Não autenticado'
@@ -490,7 +490,7 @@ module.exports = (db) => {
                 });
             }
 
-            const database = req.db;
+            const database = req.app.locals.db;
             await database.sequelize.query(`
                 INSERT OR REPLACE INTO google_analytics_selections 
                 (tenant_id, account_id, property_id, created_at, updated_at)
@@ -518,7 +518,7 @@ module.exports = (db) => {
     // Obter dados do dashboard
     router.get('/dashboard-data', async (req, res) => {
         try {
-            const selection = await getUserSelection(req.tenant.id, req.db);
+            const selection = await getUserSelection(req.tenant.id, req.app.locals.db);
             if (!selection) {
                 return res.status(400).json({
                     error: 'Propriedade não selecionada',
@@ -526,7 +526,7 @@ module.exports = (db) => {
                 });
             }
 
-            const tokens = await getValidTokens(req.tenant.id, req.db);
+            const tokens = await getValidTokens(req.tenant.id, req.app.locals.db);
             if (!tokens) {
                 return res.status(401).json({
                     error: 'Não autenticado'
@@ -633,8 +633,8 @@ module.exports = (db) => {
     // Verificar status da autenticação
     router.get('/auth/status', async (req, res) => {
         try {
-            const tokens = await getValidTokens(req.tenant.id, req.db);
-            const selection = await getUserSelection(req.tenant.id, req.db);
+            const tokens = await getValidTokens(req.tenant.id, req.app.locals.db);
+            const selection = await getUserSelection(req.tenant.id, req.app.locals.db);
             
             res.json({
                 authenticated: !!tokens,
@@ -653,7 +653,7 @@ module.exports = (db) => {
     // Logout - remover tokens
     router.delete('/auth/logout', async (req, res) => {
         try {
-            const database = req.db;
+            const database = req.app.locals.db;
             await database.sequelize.query('DELETE FROM google_analytics_tokens WHERE tenant_id = ?', {
                 replacements: [req.tenant.id]
             });
