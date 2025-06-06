@@ -6,6 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useWhatsAppStatus } from "@/contexts/WhatsAppContext";
 import { useEffect, useRef } from "react";
 
+// Novos componentes implementados
+import { AnimatedCounter } from "@/components/ui/animated-counter";
+import { AIStatusWidget, sampleAIMetrics } from "@/components/ui/ai-status-widget";
+
 interface DashboardData {
   overview: {
     totalUsers: number;
@@ -87,7 +91,7 @@ const Dashboard = () => {
           <p className="text-gray-400">Monitore seu bot de IA em tempo real</p>
         </div>
 
-        {/* Métricas Principais */}
+        {/* Métricas Principais - ANIMADAS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="bg-gray-800 border-gray-700">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -95,7 +99,12 @@ const Dashboard = () => {
               <Users className="h-4 w-4 text-purple-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{data?.overview?.totalUsers || 0}</div>
+              <AnimatedCounter 
+                value={data?.overview?.totalUsers || 0}
+                previousValue={Math.round((data?.overview?.totalUsers || 0) * 0.88)}
+                className="text-2xl text-white"
+                duration={1500}
+              />
               <p className="text-xs text-gray-400">leads cadastrados</p>
             </CardContent>
           </Card>
@@ -106,7 +115,12 @@ const Dashboard = () => {
               <MessageCircle className="h-4 w-4 text-cyan-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{data?.overview?.totalMessages || 0}</div>
+              <AnimatedCounter 
+                value={data?.overview?.totalMessages || 0}
+                previousValue={Math.round((data?.overview?.totalMessages || 0) * 0.92)}
+                className="text-2xl text-white"
+                duration={1800}
+              />
               <p className="text-xs text-gray-400">mensagens processadas</p>
             </CardContent>
           </Card>
@@ -117,7 +131,15 @@ const Dashboard = () => {
               <DollarSign className="h-4 w-4 text-green-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">R$ {parseFloat(data?.overview?.totalCosts || '0').toFixed(2)}</div>
+              <AnimatedCounter 
+                value={Math.round(parseFloat(data?.overview?.totalCosts || '0') * 100)}
+                previousValue={Math.round(parseFloat(data?.overview?.totalCosts || '0') * 85)}
+                prefix="R$ "
+                suffix=""
+                className="text-2xl text-white"
+                duration={2000}
+                formatNumber={false}
+              />
               <p className="text-xs text-gray-400">gastos com IA</p>
             </CardContent>
           </Card>
@@ -128,7 +150,12 @@ const Dashboard = () => {
               <TrendingUp className="h-4 w-4 text-orange-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">{data?.overview?.activeUsersToday || 0}</div>
+              <AnimatedCounter 
+                value={data?.overview?.activeUsersToday || 0}
+                previousValue={Math.round((data?.overview?.activeUsersToday || 0) * 0.76)}
+                className="text-2xl text-white"
+                duration={1200}
+              />
               <p className="text-xs text-gray-400">usuários ativos</p>
             </CardContent>
           </Card>
@@ -181,7 +208,15 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Gráficos */}
+        {/* Status IA */}
+        <div className="mb-8">
+          <AIStatusWidget 
+            metrics={sampleAIMetrics}
+            showDetails={true}
+          />
+        </div>
+
+        {/* Gráficos Originais */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Usuários por Estágio */}
           <Card className="bg-gray-800 border-gray-700">

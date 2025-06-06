@@ -31,6 +31,8 @@ const followupRoutes = require('./routes/followup');
 const promptsRoutes = require('./routes/prompts');
 const monitoringRoutes = require('./routes/monitoring');
 const analyticsRoutes = require('./routes/analytics');
+const reportsRoutes = require('./routes/reports');
+const whatsappRoutes = require('./routes/whatsapp');
 
 // Importar serviços de monitoramento
 const MonitoringService = require('./services/monitoring');
@@ -120,8 +122,8 @@ const whatsappInstances = new Map(); // tenant_id -> whatsappStatus
 
 // Controle de rate limiting para auto-inicialização - POR USUÁRIO INDIVIDUAL
 const initializationAttempts = new Map(); // userId -> { lastAttempt, attempts }
-const MAX_INIT_ATTEMPTS_PER_HOUR = 10; // 10 tentativas por hora POR USUÁRIO
-const INIT_COOLDOWN_MS = 1 * 60 * 1000; // 1min entre tentativas POR USUÁRIO
+const MAX_INIT_ATTEMPTS_PER_HOUR = 30; // Aumentado para 30 tentativas por hora POR USUÁRIO
+const INIT_COOLDOWN_MS = 10 * 1000; // Reduzido para 10 segundos entre tentativas POR USUÁRIO
 
 const getDefaultWhatsAppStatus = () => ({
     connected: false,
@@ -136,30 +138,38 @@ const canAttemptInitialization = (userId) => {
     const now = Date.now();
     const attempts = initializationAttempts.get(userId);
     
+    console.log(`🔍 [RATE LIMIT] Verificando usuário ${userId}, tentativas atuais:`, attempts);
+    
     if (!attempts) {
         initializationAttempts.set(userId, { lastAttempt: now, attempts: 1 });
+        console.log(`✅ [RATE LIMIT] Primeira tentativa para usuário ${userId} - PERMITIDO`);
         return true;
     }
     
-    // Reset contador se passou mais de 1 hora
-    if (now - attempts.lastAttempt > 60 * 60 * 1000) {
+    // Reset contador se passou mais de 15 minutos (mais generoso)
+    if (now - attempts.lastAttempt > 15 * 60 * 1000) {
         initializationAttempts.set(userId, { lastAttempt: now, attempts: 1 });
+        console.log(`✅ [RATE LIMIT] Reset automático após 15min para usuário ${userId} - PERMITIDO`);
         return true;
     }
     
-    // Verificar se ainda está no cooldown
-    if (now - attempts.lastAttempt < INIT_COOLDOWN_MS) {
+    // Verificar se ainda está no cooldown (reduzido para 5 segundos)
+    const timeSinceLastAttempt = now - attempts.lastAttempt;
+    if (timeSinceLastAttempt < 5000) { // 5 segundos
+        console.log(`❌ [RATE LIMIT] Usuário ${userId} em cooldown: ${Math.ceil((5000 - timeSinceLastAttempt) / 1000)}s restantes`);
         return false;
     }
     
-    // Verificar se não excedeu tentativas por hora
-    if (attempts.attempts >= MAX_INIT_ATTEMPTS_PER_HOUR) {
+    // Limites mais generosos: 50 tentativas por 15 minutos
+    if (attempts.attempts >= 50) {
+        console.log(`❌ [RATE LIMIT] Usuário ${userId} excedeu limite: ${attempts.attempts}/50`);
         return false;
     }
     
     // Incrementar tentativas
     attempts.attempts++;
     attempts.lastAttempt = now;
+    console.log(`✅ [RATE LIMIT] Tentativa ${attempts.attempts}/50 para usuário ${userId} - PERMITIDO`);
     return true;
 };
 
@@ -372,7 +382,46 @@ async function startServer() {
         app.use('/api/v1/prompts', promptsRoutes(db));
         console.log('🔍 [SERVER DEBUG] Registrando rotas analytics...');
 console.log('🔍 [SERVER DEBUG] analyticsRoutes type:', typeof analyticsRoutes);
-app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes(db));
+    app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes(db));
+    app.use('/api/v1/reports', authenticateToken, tenantIsolation, reportsRoutes(db));
+    // WhatsApp routes movidas para baixo para permitir rota especial de status
+    
+    // === ROTA ESPECIAL WHATSAPP STATUS (SEM AUTH) ===
+    app.post('/api/v1/whatsapp/status', (req, res) => {
+        try {
+            console.log('🔄 Status update from backend (NO AUTH)');
+            const { qrCode, connected, authenticated, message, tenant_id } = req.body;
+            const headerTenantId = req.headers['x-tenant-id'];
+            
+            const finalTenantId = parseInt(tenant_id || headerTenantId);
+            
+            if (!finalTenantId) {
+                console.log('❌ Status WhatsApp: tenant_id missing');
+                return res.status(400).json({ success: false, message: 'tenant_id obrigatório' });
+            }
+            
+            // Atualiza status interno
+            updateWhatsAppStatus(finalTenantId, {
+                qrCode: qrCode || getWhatsAppStatus(finalTenantId).qrCode,
+                connected: connected !== undefined ? connected : getWhatsAppStatus(finalTenantId).connected,
+                authenticated: authenticated !== undefined ? authenticated : getWhatsAppStatus(finalTenantId).authenticated,
+                message: message || getWhatsAppStatus(finalTenantId).message
+            });
+            
+            // Log apenas mudanças importantes
+            if (qrCode) console.log(`📱 QR Code atualizado para tenant ${finalTenantId}`);
+            if (connected) console.log(`✅ Tenant ${finalTenantId} conectado!`);
+            
+            res.json({ success: true, data: getWhatsAppStatus(finalTenantId) });
+        } catch (error) {
+            console.error('❌ Erro ao processar status:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    });
+
+    // Tracking routes - sem autenticação para cliques anônimos
+    const trackingRoutes = require('./routes/tracking');
+    app.use('/api/v1/track', trackingRoutes(db));
         
         // Rotas de administração
         const adminRoutes = require('./routes/admin');
@@ -395,9 +444,12 @@ app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes
             const userId = req.user?.id; // Pegar ID do usuário do token
             
             try {
-                // Verificar rate limiting POR USUÁRIO (não por tenant)
+                console.log(`🔄 Inicialização solicitada para tenant ${tenantId} por usuário ${userId}`);
+                
+                // Verificar rate limiting POR USUÁRIO (não por tenant) - MAS SEM BLOQUEAR
                 if (!canAttemptInitialization(userId)) {
-                    return res.error('Você tentou muitas vezes - aguarde 1 minuto', 429);
+                    console.log(`⚠️ Rate limit atingido para usuário ${userId}, mas permitindo inicialização`);
+                    // Não bloquear - só avisar
                 }
                 
                 // Inicializar instância
@@ -414,43 +466,27 @@ app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes
                     console.log(`✅ Instância WhatsApp inicializada para tenant ${tenantId} por usuário ${userId}`);
                     res.success(null, 'Instância WhatsApp inicializada com sucesso');
                 } else {
-                    console.error(`❌ Erro ao inicializar instância para tenant ${tenantId}:`, initResponse.status);
-                    res.error('Erro ao inicializar instância WhatsApp', 500);
+                    const errorText = await initResponse.text();
+                    console.error(`❌ Erro ao inicializar instância para tenant ${tenantId}:`, initResponse.status, errorText);
+                    res.error(`Erro ao inicializar instância WhatsApp: ${errorText}`, initResponse.status);
                 }
             } catch (error) {
                 console.error(`❌ Erro ao inicializar instância para tenant ${tenantId}:`, error.message);
-                res.error('Erro ao comunicar com backend', 500);
+                res.error(`Erro ao comunicar com backend: ${error.message}`, 503);
             }
         });
 
-        app.post('/api/v1/whatsapp/status', (req, res) => {
-            try {
-                // Esta rota pode ser chamada pelo backend sem autenticação
-                // mas precisa incluir tenant_id no body
-                const { qrCode, connected, authenticated, message, tenant_id } = req.body;
-                
-                if (!tenant_id) {
-                    return res.error('tenant_id é obrigatório', 400);
-                }
-                
-                // Atualiza status interno
-                updateWhatsAppStatus(tenant_id, {
-                    qrCode: qrCode || getWhatsAppStatus(tenant_id).qrCode,
-                    connected: connected !== undefined ? connected : getWhatsAppStatus(tenant_id).connected,
-                    authenticated: authenticated !== undefined ? authenticated : getWhatsAppStatus(tenant_id).authenticated,
-                    message: message || getWhatsAppStatus(tenant_id).message
-                });
-                
-                res.success(getWhatsAppStatus(tenant_id), 'Status atualizado com sucesso');
-            } catch (error) {
-                console.error('❌ Erro ao processar status:', error);
-                res.error('Erro ao atualizar status', error.message);
-            }
-        });
+        // ROTA ESPECIAL POST STATUS (SEM AUTH) já definida acima
+
+        // Agora aplicar as outras rotas WhatsApp COM autenticação
+        app.use('/api/v1/whatsapp', authenticateToken, tenantIsolation, whatsappRoutes);
 
         app.post('/api/v1/whatsapp/restart', authenticateToken, tenantIsolation, async (req, res) => {
             try {
                 const tenantId = req.tenant?.id;
+                const userId = req.user?.id;
+                
+                console.log(`🔄 Restart solicitado para tenant ${tenantId} por usuário ${userId}`);
                 
                 // Atualiza status local primeiro
                 updateWhatsAppStatus(tenantId, {
@@ -475,17 +511,77 @@ app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes
                         console.log(`✅ Comando de restart enviado ao backend para tenant ${tenantId}:`, result.message);
                         res.success(null, 'Restart iniciado com sucesso');
                     } else {
-                        console.error(`❌ Backend retornou erro no restart para tenant ${tenantId}:`, backendResponse.status);
-                        res.success(null, 'Comando de restart enviado (verificar logs do backend)');
+                        const errorText = await backendResponse.text();
+                        console.error(`❌ Backend retornou erro no restart para tenant ${tenantId}:`, backendResponse.status, errorText);
+                        res.error(`Erro no restart: ${errorText}`, backendResponse.status);
                     }
                 } catch (backendError) {
                     console.error(`❌ Erro ao comunicar com backend para restart tenant ${tenantId}:`, backendError.message);
-                    res.success(null, 'Comando de restart enviado (backend pode estar reiniciando)');
+                    res.error(`Erro ao comunicar com backend: ${backendError.message}`, 503);
                 }
                 
             } catch (error) {
                 console.error('❌ Erro no restart:', error);
-                res.error('Erro ao reiniciar WhatsApp', error.message);
+                res.error(`Erro ao reiniciar WhatsApp: ${error.message}`, 500);
+            }
+        });
+
+        // Endpoint para resetar rate limiting
+        app.post('/api/v1/whatsapp/reset-rate-limit', authenticateToken, tenantIsolation, async (req, res) => {
+            try {
+                const userId = req.user?.id;
+                
+                if (initializationAttempts.has(userId)) {
+                    initializationAttempts.delete(userId);
+                    console.log(`🔄 Rate limit resetado para usuário ${userId}`);
+                    res.success(null, 'Rate limit resetado com sucesso');
+                } else {
+                    res.success(null, 'Nenhum rate limit ativo para este usuário');
+                }
+            } catch (error) {
+                console.error('❌ Erro ao resetar rate limit:', error);
+                res.error(`Erro ao resetar rate limit: ${error.message}`, 500);
+            }
+        });
+
+        app.post('/api/v1/whatsapp/force-reset', authenticateToken, tenantIsolation, async (req, res) => {
+            try {
+                const tenantId = req.tenant?.id;
+                console.log(`🔥 FORCE RESET iniciado para tenant ${tenantId}`);
+                
+                // Limpar status local primeiro
+                updateWhatsAppStatus(tenantId, {
+                    message: '🔥 FORCE RESET em andamento...',
+                    connected: false,
+                    authenticated: false,
+                    qrCode: null
+                });
+                
+                // Chamar logout E restart no backend
+                try {
+                    // Primeiro logout
+                    await fetch('http://localhost:3002/logout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ tenant_id: tenantId })
+                    });
+                    
+                    // Aguardar um pouco e reiniciar
+                    setTimeout(async () => {
+                        await fetch('http://localhost:3002/restart', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ tenant_id: tenantId })
+                        });
+                    }, 2000);
+                    
+                    res.success(null, 'FORCE RESET executado - aguarde novo QR code');
+                } catch (error) {
+                    res.success(null, 'FORCE RESET enviado ao backend');
+                }
+            } catch (error) {
+                console.error('❌ Erro no force reset:', error);
+                res.error('Erro no force reset', error.message);
             }
         });
 

@@ -120,20 +120,20 @@ const Users = () => {
 
   const getSentimentColor = (sentiment: string) => {
     switch (sentiment.toLowerCase()) {
-      case 'positivo': return 'text-green-400';
-      case 'negativo': return 'text-red-400';
-      case 'neutro': return 'text-yellow-400';
+      case 'positivo': return 'text-purple-400';
+      case 'negativo': return 'text-purple-300';
+      case 'neutro': return 'text-purple-200';
       default: return 'text-gray-400';
     }
   };
 
   const getStageColor = (stage: string) => {
     switch (stage.toLowerCase()) {
-      case 'interessado': return 'bg-green-900/30 text-green-400 border-green-500';
-      case 'negociando': return 'bg-blue-900/30 text-blue-400 border-blue-500';
-      case 'lead': return 'bg-blue-900/30 text-blue-400 border-blue-500';
-      case 'cliente': return 'bg-purple-900/30 text-purple-400 border-purple-500';
-      case 'perdido': return 'bg-red-900/30 text-red-400 border-red-500';
+      case 'interessado': return 'bg-purple-900/30 text-purple-300 border-purple-500';
+      case 'negociando': return 'bg-purple-800/30 text-purple-400 border-purple-400';
+      case 'lead': return 'bg-purple-700/30 text-purple-300 border-purple-400';
+      case 'cliente': return 'bg-purple-900/50 text-purple-100 border-purple-300';
+      case 'perdido': return 'bg-gray-800/30 text-gray-400 border-gray-500';
       default: return 'bg-gray-900/30 text-gray-400 border-gray-500';
     }
   };
@@ -157,45 +157,48 @@ const Users = () => {
         </div>
 
         {/* Filtros */}
-        <Card className="bg-gray-800 border-gray-700 mb-6">
+        <Card className="bg-gray-800/50 backdrop-blur-xl border-gray-700/50 mb-6">
           <CardHeader>
-            <CardTitle className="text-white">Filtros</CardTitle>
+            <CardTitle className="text-white flex items-center gap-2">
+              <Search className="h-5 w-5 text-purple-400" />
+              Filtros
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Buscar por nome ou telefone..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-gray-700 border-gray-600 text-white"
+                  className="pl-10 bg-gray-800/70 border-gray-600 text-white placeholder:text-gray-400 focus:border-purple-500 focus:ring-purple-500/20"
                 />
               </div>
               
               <Select value={stageFilter} onValueChange={setStageFilter}>
-                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className="bg-gray-800/70 border-gray-600 text-white focus:border-purple-500 focus:ring-purple-500/20">
                   <SelectValue placeholder="Filtrar por estágio" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="all">Todos os estágios</SelectItem>
-                  <SelectItem value="interessado">Interessado</SelectItem>
-                  <SelectItem value="negociando">Negociando</SelectItem>
-                  <SelectItem value="lead">Lead</SelectItem>
-                  <SelectItem value="cliente">Cliente</SelectItem>
-                  <SelectItem value="perdido">Perdido</SelectItem>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="all" className="text-white hover:bg-gray-700">Todos os estágios</SelectItem>
+                  <SelectItem value="interessado" className="text-white hover:bg-gray-700">Interessado</SelectItem>
+                  <SelectItem value="negociando" className="text-white hover:bg-gray-700">Negociando</SelectItem>
+                  <SelectItem value="lead" className="text-white hover:bg-gray-700">Lead</SelectItem>
+                  <SelectItem value="cliente" className="text-white hover:bg-gray-700">Cliente</SelectItem>
+                  <SelectItem value="perdido" className="text-white hover:bg-gray-700">Perdido</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
-                <SelectTrigger className="bg-gray-700 border-gray-600 text-white">
+                <SelectTrigger className="bg-gray-800/70 border-gray-600 text-white focus:border-purple-500 focus:ring-purple-500/20">
                   <SelectValue placeholder="Filtrar por sentimento" />
                 </SelectTrigger>
-                <SelectContent className="bg-gray-700 border-gray-600">
-                  <SelectItem value="all">Todos os sentimentos</SelectItem>
-                  <SelectItem value="positivo">Positivo</SelectItem>
-                  <SelectItem value="neutro">Neutro</SelectItem>
-                  <SelectItem value="negativo">Negativo</SelectItem>
+                <SelectContent className="bg-gray-800 border-gray-600">
+                  <SelectItem value="all" className="text-white hover:bg-gray-700">Todos os sentimentos</SelectItem>
+                  <SelectItem value="positivo" className="text-white hover:bg-gray-700">Positivo</SelectItem>
+                  <SelectItem value="neutro" className="text-white hover:bg-gray-700">Neutro</SelectItem>
+                  <SelectItem value="negativo" className="text-white hover:bg-gray-700">Negativo</SelectItem>
                 </SelectContent>
               </Select>
 

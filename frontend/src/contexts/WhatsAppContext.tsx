@@ -18,6 +18,7 @@ interface WhatsAppContextType {
   initializeWhatsApp: () => Promise<void>;
   restartWhatsApp: () => Promise<void>;
   logoutWhatsApp: () => Promise<void>;
+  forceResetWhatsApp: () => Promise<void>;
   isLoading: boolean;
   lastError: string | null;
   isAutoRetrying: boolean;
@@ -314,12 +315,41 @@ export const WhatsAppProvider: React.FC<WhatsAppProviderProps> = ({ children }) 
     }
   };
 
+  const forceResetWhatsApp = async () => {
+    setIsLoading(true);
+    setLastError(null);
+    
+    // Parar auto-retry durante force reset
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+    }
+    setIsAutoRetrying(false);
+    autoRetryAttemptsRef.current = 0; // Reset counter
+    
+    console.log('🔥 FORCE RESET iniciado pelo usuário');
+    
+    try {
+      await apiCall('/whatsapp/force-reset', {
+        method: 'POST'
+      });
+      // O status será atualizado via Socket.IO
+    } catch (error) {
+      console.error('Erro no force reset:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro no force reset';
+      setLastError(errorMessage);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: WhatsAppContextType = {
     whatsappStatus,
     fetchStatus,
     initializeWhatsApp,
     restartWhatsApp,
     logoutWhatsApp,
+    forceResetWhatsApp,
     isLoading,
     lastError,
     isAutoRetrying

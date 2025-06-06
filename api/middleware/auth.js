@@ -14,19 +14,10 @@ if (!process.env.JWT_SECRET) {
 
 // Middleware de autenticação JWT
 const authenticateToken = (req, res, next) => {
-    console.log('🔍 [AUTH DEBUG] ===================');
-    console.log('🔍 [AUTH DEBUG] URL:', req.originalUrl);
-    console.log('🔍 [AUTH DEBUG] Método:', req.method);
-    console.log('🔍 [AUTH DEBUG] Headers:', JSON.stringify(req.headers, null, 2));
-    
     const authHeader = req.headers['authorization'];
-    console.log('🔍 [AUTH DEBUG] Auth header:', authHeader);
-    
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-    console.log('🔍 [AUTH DEBUG] Token extraído:', token ? `${token.substring(0, 20)}...` : 'NULL/UNDEFINED');
 
     if (!token) {
-        console.log('❌ [AUTH DEBUG] Token não fornecido - retornando 401');
         return res.status(401).json({
             success: false,
             error: 'Token de acesso requerido',
@@ -36,7 +27,6 @@ const authenticateToken = (req, res, next) => {
 
     jwt.verify(token, JWT_SECRET, (err, decoded) => {
         if (err) {
-            console.log('❌ [AUTH DEBUG] Erro na verificação do JWT:', err.message);
             return res.status(403).json({
                 success: false,
                 error: 'Token inválido ou expirado',
@@ -44,16 +34,12 @@ const authenticateToken = (req, res, next) => {
             });
         }
 
-        console.log('✅ [AUTH DEBUG] Token válido. Decoded:', JSON.stringify(decoded, null, 2));
-
-        // Adiciona informações do tenant ao request
         req.tenant = {
             id: decoded.tenantId,
             email: decoded.email,
             companyName: decoded.companyName
         };
 
-        console.log('✅ [AUTH DEBUG] Tenant info adicionado:', JSON.stringify(req.tenant, null, 2));
         next();
     });
 };

@@ -7,6 +7,7 @@ import { QrCode, Smartphone, CheckCircle, AlertCircle, RotateCcw, Wifi, ArrowRig
 import QRCode from 'qrcode';
 import { useAuth } from "@/contexts/AuthContext";
 import { useWhatsAppStatus } from "@/contexts/WhatsAppContext";
+import { apiCall } from "@/lib/auth";
 
 const WhatsAppLogin = () => {
   const { isAuthenticated } = useAuth();
@@ -16,6 +17,7 @@ const WhatsAppLogin = () => {
     initializeWhatsApp, 
     restartWhatsApp, 
     logoutWhatsApp, 
+    forceResetWhatsApp,
     isLoading, 
     lastError, 
     isAutoRetrying 
@@ -23,30 +25,44 @@ const WhatsAppLogin = () => {
   const [qrCodeImage, setQrCodeImage] = useState<string>('');
   const [isRetrying, setIsRetrying] = useState(false);
   const initializationAttempted = useRef(false);
+  
+
 
   // Buscar status inicial quando a página carrega e inicializar se necessário (apenas uma vez)
   useEffect(() => {
     if (isAuthenticated && !initializationAttempted.current) {
       initializationAttempted.current = true;
       
+      // Resetar rate limit quando a página carrega
+      apiCall('/whatsapp/reset-rate-limit', { method: 'POST' })
+        .then(() => console.log('✅ Rate limit resetado ao carregar página'))
+        .catch(error => console.log('⚠️ Erro ao resetar rate limit:', error.message));
+      
       fetchStatus().then(() => {
-        // Inicializar WhatsApp automaticamente quando:
+        // Inicializar WhatsApp automaticamente APENAS se:
         // 1. Não está conectado E
         // 2. Não há QR code ativo E  
         // 3. Não está fazendo logout ativo E
-        // 4. Não está já inicializando
+        // 4. Não está já inicializando E
+        // 5. Não está em auto-retry E
+        // 6. Não há erro recente
         const shouldAutoInitialize = !whatsappStatus.connected && 
                                     !whatsappStatus.qrCode && 
                                     !whatsappStatus.message.includes('Removendo') &&
                                     !whatsappStatus.message.includes('logout') &&
                                     !whatsappStatus.message.includes('Inicializando') &&
-                                    !isLoading;
+                                    !whatsappStatus.message.includes('Reiniciando') &&
+                                    !isLoading &&
+                                    !isAutoRetrying &&
+                                    !lastError;
         
         if (shouldAutoInitialize) {
-          console.log('🆕 WhatsAppLogin: Auto-inicializando WhatsApp (desconectado)...');
+          console.log('🆕 WhatsAppLogin: Auto-inicializando WhatsApp (condições atendidas)...');
           initializeWhatsApp().catch(error => {
             console.error('❌ WhatsAppLogin: Erro ao auto-inicializar WhatsApp:', error);
           });
+        } else {
+          console.log('⏸️ WhatsAppLogin: Auto-inicialização bloqueada - condições não atendidas');
         }
       });
     }
@@ -76,10 +92,15 @@ const WhatsAppLogin = () => {
   const handleRestart = async () => {
     setIsRetrying(true);
     try {
+      console.log('🔄 Usuário clicou em REINICIAR');
       await restartWhatsApp();
       console.log('✅ Restart solicitado com sucesso');
     } catch (error) {
       console.error('❌ Erro ao solicitar restart:', error);
+      // Mostrar erro mais detalhado se houver
+      if (error instanceof Error) {
+        alert(`Erro ao reiniciar: ${error.message}`);
+      }
     } finally {
       setTimeout(() => setIsRetrying(false), 3000);
     }
@@ -346,6 +367,19 @@ const WhatsAppLogin = () => {
               <Card className="bg-gray-800/50 backdrop-blur-xl border-gray-700/50 shadow-xl">
                 <CardContent className="pt-8 pb-8">
                   <div className="text-center space-y-6">
+                    
+                    {/* BOTÃO REINICIAR SEMPRE VISÍVEL */}
+                    <div className="flex justify-center mb-6">
+                      <Button 
+                        onClick={handleRestart}
+                        disabled={isRetrying || isLoading}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-8 py-3 text-lg shadow-lg"
+                      >
+                        <RotateCcw className={`h-5 w-5 mr-2 ${isRetrying || isLoading ? 'animate-spin' : ''}`} />
+                        {isRetrying || isLoading ? 'REINICIANDO...' : 'REINICIAR'}
+                      </Button>
+                    </div>
+
                     {whatsappStatus.message.includes('DESCONECTADO') || whatsappStatus.message.includes('🔴') ? (
                       // Estado Desconectado - mais visível
                       <>
@@ -363,7 +397,7 @@ const WhatsAppLogin = () => {
                             </p>
                           </div>
                         </div>
-                        <div className="flex justify-center">
+                        <div className="flex justify-center gap-3">
                           <Button 
                             variant="outline" 
                             onClick={handleRestart}
@@ -371,7 +405,22 @@ const WhatsAppLogin = () => {
                             className="border-blue-500 text-blue-300 hover:bg-blue-600 hover:text-white bg-transparent font-semibold px-6 py-2"
                           >
                             <RotateCcw className={`h-4 w-4 mr-2 ${isRetrying ? 'animate-spin' : ''}`} />
-                            {isRetrying ? 'Reiniciando...' : '🔄 Reconectar WhatsApp'}
+                            {isRetrying ? 'Reiniciando...' : '🔄 Reconectar'}
+                          </Button>
+                          
+                          <Button 
+                            onClick={async () => {
+                              try {
+                                await forceResetWhatsApp();
+                              } catch (error) {
+                                console.error('Erro no force reset:', error);
+                              }
+                            }}
+                            disabled={isLoading}
+                            className="bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-2"
+                          >
+                            <Zap className="h-4 w-4 mr-2" />
+                            FORCE RESET
                           </Button>
                         </div>
                       </>
@@ -383,9 +432,14 @@ const WhatsAppLogin = () => {
                         </div>
                         <div>
                           <h3 className="text-xl font-semibold text-white mb-2">Preparando Conexão...</h3>
-                          <p className="text-gray-300">
-                            Aguarde enquanto configuramos tudo para você.
+                          <p className="text-gray-300 mb-4">
+                            {whatsappStatus.message || 'Aguarde enquanto configuramos tudo para você.'}
                           </p>
+                          <div className="p-3 bg-purple-500/20 border border-purple-500/30 rounded-lg mb-4">
+                            <p className="text-purple-300 text-sm font-medium">
+                              💡 Use o botão "REINICIAR" acima para forçar nova conexão
+                            </p>
+                          </div>
                         </div>
                         <div className="flex justify-center">
                           <div className="flex space-x-2">
@@ -403,6 +457,8 @@ const WhatsAppLogin = () => {
             
           </div>
         </div>
+
+
 
         {/* Info Footer */}
         <div className="text-center text-gray-400 text-sm space-y-2 mt-8">

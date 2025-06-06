@@ -33,7 +33,7 @@ const corsOptions = {
 // Rate limiting
 const limiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
-    max: 100, // máximo 100 requests por IP
+    max: 300, // aumentado de 100 para 300 requests por IP
     message: {
         error: 'Muitas requisições, tente novamente em 15 minutos'
     }
@@ -42,7 +42,7 @@ const limiter = rateLimit({
 // Rate limiting mais restritivo para endpoints de escrita
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 20, // máximo 20 requests de escrita por IP
+    max: 100, // aumentado de 20 para 100 requests de escrita por IP
     message: {
         error: 'Muitas operações de escrita, tente novamente em 15 minutos'
     }

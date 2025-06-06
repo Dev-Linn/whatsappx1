@@ -149,7 +149,7 @@ class LoggerService {
                 ]
             });
         } catch (error) {
-            console.error('❌ Erro ao salvar log no banco:', error.message);
+            // console.error('❌ Erro ao salvar log no banco:', error.message); // Temporariamente desabilitado
         }
     }
 

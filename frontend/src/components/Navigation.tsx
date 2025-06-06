@@ -36,14 +36,24 @@ const Navigation = () => {
       icon: Users,
     },
     {
-      title: "Analytics",
-      href: "/analytics",
-      icon: BarChart3,
+      title: "WhatsApp",
+      href: "/whatsapp",
+      icon: Smartphone,
     },
     {
       title: "Conversas",
       href: "/conversations",
       icon: MessageCircle,
+    },
+    {
+      title: "Analytics",
+      href: "/analytics",
+      icon: BarChart3,
+    },
+    {
+      title: "Relatórios",
+      href: "/reports",
+      icon: BarChart3,
     },
     {
       title: "Custos",
@@ -54,11 +64,6 @@ const Navigation = () => {
       title: "IA",
       href: "/ia",
       icon: Bot,
-    },
-    {
-      title: "WhatsApp Login",
-      href: "/whatsapp-login",
-      icon: Smartphone,
     },
   ];
 

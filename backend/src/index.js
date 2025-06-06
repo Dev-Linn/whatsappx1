@@ -431,17 +431,17 @@ class WhatsAppInstance {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'x-tenant-id': this.tenantId.toString() // Usar header especial para comunicação interna
                 },
                 body: JSON.stringify(statusWithTimestamp)
             });
             
             if (response.ok) {
-                // Log reduzido - apenas mudanças importantes
-                if (status.connected || status.qrCode || status.message.includes('Erro')) {
-                    console.log(`✅ [Tenant ${this.tenantId}] Status: ${status.message}`);
-                }
+                // Log apenas mudanças importantes  
+                if (status.qrCode) console.log(`📱 [Tenant ${this.tenantId}] QR Code enviado`);
+                if (status.connected) console.log(`✅ [Tenant ${this.tenantId}] Conectado!`);
             } else {
-                console.error(`❌ [Tenant ${this.tenantId}] Erro API:`, response.status);
+                console.error(`❌ [Tenant ${this.tenantId}] API Error:`, response.status);
             }
         } catch (error) {
             console.error(`❌ [Tenant ${this.tenantId}] Erro ao comunicar com API:`, error.message);
@@ -1491,11 +1491,46 @@ httpApp.post('/restart', async (req, res) => {
     console.log(`🔄 Comando de reinicialização recebido para tenant ${tenant_id}`);
     
     try {
+        // Se for erro de instância morta, limpar primeiro
+        if (whatsappInstances.has(tenant_id)) {
+            const existingInstance = whatsappInstances.get(tenant_id);
+            try {
+                // Tentar verificar se está viva
+                if (existingInstance.client) {
+                    await Promise.race([
+                        existingInstance.client.getState(),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Healthcheck timeout')), 3000)
+                        )
+                    ]);
+                }
+            } catch (healthError) {
+                console.log(`💀 [Tenant ${tenant_id}] Instância morta detectada no restart, limpando...`);
+                whatsappInstances.delete(tenant_id);
+            }
+        }
+        
         const instance = await getOrCreateInstance(tenant_id);
         await instance.restart();
         res.json({ message: `Instância ${tenant_id} reiniciada com sucesso` });
     } catch (error) {
         console.error(`❌ Erro ao reiniciar instância ${tenant_id}:`, error);
+        
+        // Se for erro de Target closed, forçar limpeza e recriar
+        if (error.message.includes('Target closed') || error.message.includes('Protocol error')) {
+            console.log(`🔄 [Tenant ${tenant_id}] Erro de instância morta no restart, forçando recriação...`);
+            try {
+                whatsappInstances.delete(tenant_id);
+                const newInstance = await getOrCreateInstance(tenant_id);
+                res.json({ message: `Instância ${tenant_id} recriada após erro` });
+                return;
+            } catch (retryError) {
+                console.error(`❌ [Tenant ${tenant_id}] Erro na recriação:`, retryError);
+                res.status(500).json({ error: `Erro persistente: ${retryError.message}` });
+                return;
+            }
+        }
+        
         res.status(500).json({ error: error.message });
     }
 });
@@ -1530,13 +1565,71 @@ httpApp.post('/initialize', async (req, res) => {
         return res.status(400).json({ error: 'tenant_id é obrigatório' });
     }
     
-    console.log(`🆕 Comando de inicialização recebido via HTTP`);
+    console.log(`🆕 Comando de inicialização recebido via HTTP para tenant ${tenant_id}`);
     
     try {
+        // Verificar se já existe uma instância e se ela está morta
+        if (whatsappInstances.has(tenant_id)) {
+            const existingInstance = whatsappInstances.get(tenant_id);
+            console.log(`🔍 [Tenant ${tenant_id}] Verificando estado da instância existente...`);
+            
+            try {
+                // Tentar um healthcheck simples na instância existente
+                if (existingInstance.client) {
+                    await Promise.race([
+                        existingInstance.client.getState(),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Healthcheck timeout')), 3000)
+                        )
+                    ]);
+                    console.log(`✅ [Tenant ${tenant_id}] Instância existente está ativa`);
+                } else {
+                    throw new Error('Cliente não existe');
+                }
+            } catch (healthError) {
+                console.log(`💀 [Tenant ${tenant_id}] Instância existente está morta (${healthError.message}), removendo...`);
+                
+                // Limpar instância morta
+                try {
+                    if (existingInstance.client) {
+                        await existingInstance.client.destroy();
+                    }
+                    if (existingInstance.healthCheckInterval) {
+                        clearInterval(existingInstance.healthCheckInterval);
+                    }
+                    if (existingInstance.qrCodeTimeout) {
+                        clearTimeout(existingInstance.qrCodeTimeout);
+                    }
+                } catch (cleanupError) {
+                    console.log(`⚠️ [Tenant ${tenant_id}] Erro na limpeza:`, cleanupError.message);
+                }
+                
+                whatsappInstances.delete(tenant_id);
+                console.log(`🗑️ [Tenant ${tenant_id}] Instância morta removida`);
+            }
+        }
+        
         const instance = await getOrCreateInstance(tenant_id);
         res.json({ message: `Instância ${tenant_id} inicializada com sucesso` });
     } catch (error) {
         console.error(`❌ Erro ao inicializar instância ${tenant_id}:`, error);
+        
+        // Se for erro de Target closed, tentar uma vez limpar e recriar
+        if (error.message.includes('Target closed') || error.message.includes('Protocol error')) {
+            console.log(`🔄 [Tenant ${tenant_id}] Detectado erro de instância morta, tentando limpeza forçada...`);
+            
+            try {
+                whatsappInstances.delete(tenant_id);
+                const newInstance = await getOrCreateInstance(tenant_id);
+                res.json({ message: `Instância ${tenant_id} recriada após limpeza` });
+                return;
+            } catch (retryError) {
+                console.error(`❌ [Tenant ${tenant_id}] Erro após tentativa de limpeza:`, retryError);
+                res.status(500).json({ error: `Erro persistente: ${retryError.message}` });
+                return;
+            }
+        }
+        
         res.status(500).json({ error: error.message });
     }
 });
@@ -1578,6 +1671,63 @@ httpApp.post('/send-followup', async (req, res) => {
         console.error(`❌ Erro ao enviar follow-up:`, error);
         res.status(500).json({ error: error.message });
     }
+});
+
+// Endpoint para limpar instâncias mortas
+httpApp.post('/cleanup', async (req, res) => {
+    console.log('🧹 Iniciando limpeza de instâncias mortas...');
+    
+    const cleanup = [];
+    const promises = [];
+    
+    whatsappInstances.forEach((instance, tenantId) => {
+        const checkPromise = (async () => {
+            try {
+                if (instance.client) {
+                    await Promise.race([
+                        instance.client.getState(),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Timeout')), 3000)
+                        )
+                    ]);
+                    console.log(`✅ [Tenant ${tenantId}] Instância está viva`);
+                } else {
+                    throw new Error('Cliente não existe');
+                }
+            } catch (error) {
+                console.log(`💀 [Tenant ${tenantId}] Instância morta detectada: ${error.message}`);
+                cleanup.push(tenantId);
+            }
+        })();
+        
+        promises.push(checkPromise);
+    });
+    
+    await Promise.all(promises);
+    
+    // Limpar instâncias mortas
+    let cleanedCount = 0;
+    for (const tenantId of cleanup) {
+        try {
+            const instance = whatsappInstances.get(tenantId);
+            if (instance) {
+                if (instance.client) await instance.client.destroy();
+                if (instance.healthCheckInterval) clearInterval(instance.healthCheckInterval);
+                if (instance.qrCodeTimeout) clearTimeout(instance.qrCodeTimeout);
+            }
+            whatsappInstances.delete(tenantId);
+            cleanedCount++;
+            console.log(`🗑️ [Tenant ${tenantId}] Instância morta removida`);
+        } catch (cleanupError) {
+            console.error(`❌ [Tenant ${tenantId}] Erro na limpeza:`, cleanupError.message);
+        }
+    }
+    
+    res.json({
+        message: `Limpeza concluída: ${cleanedCount} instâncias mortas removidas`,
+        cleanedInstances: cleanup,
+        remainingInstances: whatsappInstances.size
+    });
 });
 
 // Endpoint para status de todas as instâncias

@@ -87,8 +87,8 @@ const AdminMonitoring: React.FC = () => {
   });
   
   // Auto refresh
-  const [autoRefresh, setAutoRefresh] = useState(true);
-  const [refreshInterval, setRefreshInterval] = useState(30); // seconds
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [refreshInterval, setRefreshInterval] = useState(60);
 
   // Load dashboard data
   const loadDashboard = async () => {
@@ -296,9 +296,9 @@ const AdminMonitoring: React.FC = () => {
                     onChange={(e) => setRefreshInterval(Number(e.target.value))}
                     className="text-sm border border-gray-300 rounded px-2 py-1"
                   >
-                    <option value={10}>10s</option>
                     <option value={30}>30s</option>
                     <option value={60}>1min</option>
+                    <option value={120}>2min</option>
                     <option value={300}>5min</option>
                   </select>
                 )}
