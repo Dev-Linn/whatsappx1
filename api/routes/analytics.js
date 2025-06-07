@@ -715,11 +715,13 @@ module.exports = (db) => {
             // 2. Buscar conversas recentes (simplificado)
             const recentConversations = await database.sequelize.query(`
                 SELECT 
-                    c.phone_number,
-                    c.conversation_id,
+                    u.phone as phone_number,
+                    c.id as conversation_id,
                     c.created_at as conversation_start,
-                    c.created_at as last_message
+                    c.created_at as last_message,
+                    c.user_id
                 FROM conversations c
+                JOIN users u ON c.user_id = u.id
                 WHERE c.tenant_id = ? 
                 AND datetime(c.created_at) >= datetime('now', '-24 hours')
                 ORDER BY c.created_at DESC
@@ -736,13 +738,13 @@ module.exports = (db) => {
                 recentConversations.map(async (conv) => {
                     try {
                         const lastMessages = await database.sequelize.query(`
-                            SELECT content, created_at
+                            SELECT content, timestamp as created_at
                             FROM messages 
-                            WHERE conversation_id = ? AND sender_id = ?
-                            ORDER BY created_at DESC 
+                            WHERE conversation_id = ? AND user_id = ? AND is_bot = 0
+                            ORDER BY timestamp DESC 
                             LIMIT 1
                         `, {
-                            replacements: [conv.conversation_id, conv.phone_number],
+                            replacements: [conv.conversation_id, conv.user_id],
                             type: database.sequelize.QueryTypes.SELECT
                         });
 
