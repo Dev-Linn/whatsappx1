@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,26 +52,7 @@ const Integrations = () => {
   const navigate = useNavigate();
   const { whatsappStatus } = useWhatsAppStatus();
 
-  // Carregar contador de celebrações do localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem('celebration-count');
-    if (stored) {
-      setCelebrationCount(parseInt(stored));
-    }
-  }, []);
-
-  useEffect(() => {
-    checkIntegrationsStatus();
-  }, []);
-
-  // Atualizar quando o status do WhatsApp mudar (via Socket.IO)
-  useEffect(() => {
-    if (!loading) { // Só atualizar após o carregamento inicial
-      checkIntegrationsStatus();
-    }
-  }, [whatsappStatus.connected, whatsappStatus.authenticated]);
-
-  const checkIntegrationsStatus = async () => {
+  const checkIntegrationsStatus = useCallback(async () => {
     try {
       const token = getToken();
       
@@ -81,11 +62,7 @@ const Integrations = () => {
         authenticated: whatsappStatus.authenticated
       };
       
-      console.log('✅ WhatsApp Status from Context:', currentWhatsAppStatus);
-      console.log('📡 Full WhatsApp Status:', whatsappStatus);
-      
       // Verificar status Analytics  
-      console.log('🔍 [DEBUG] Fazendo chamada para Analytics Status:', API_ENDPOINTS.ANALYTICS_STATUS);
       const analyticsResponse = await fetch(API_ENDPOINTS.ANALYTICS_STATUS, {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -96,26 +73,13 @@ const Integrations = () => {
       let analyticsStatus = { authenticated: false, hasSelection: false };
 
       if (analyticsResponse.ok) {
-        const rawResponse = await analyticsResponse.json();
-        console.log('🔍 [DEBUG] Analytics Raw Response:', rawResponse);
-        
-        // Verificar se a resposta tem os campos corretos
-        analyticsStatus = {
-          authenticated: !!rawResponse.authenticated,
-          hasSelection: !!rawResponse.hasSelection
-        };
-        console.log('✅ Analytics Status Processed:', analyticsStatus);
-      } else {
-        console.log('❌ Analytics Status Error:', analyticsResponse.status);
-        console.log('❌ Analytics Status Text:', await analyticsResponse.text());
+        analyticsStatus = await analyticsResponse.json();
       }
 
       const newStatus = {
         whatsapp: currentWhatsAppStatus,
         analytics: analyticsStatus
       };
-
-      console.log('🔍 [DEBUG] Final Integration Status:', newStatus);
 
       // Verificar se desbloqueou nova integração cruzada
       const wasWhatsappAnalyticsAvailable = integrationStatus.whatsapp.connected && 
@@ -128,19 +92,11 @@ const Integrations = () => {
                                           newStatus.analytics.authenticated && 
                                           newStatus.analytics.hasSelection;
 
-      console.log('🔍 [DEBUG] Cross Integration Check:', {
-        wasAvailable: wasWhatsappAnalyticsAvailable,
-        isAvailable: isWhatsappAnalyticsAvailable,
-        whatsappOk: newStatus.whatsapp.connected && newStatus.whatsapp.authenticated,
-        analyticsOk: newStatus.analytics.authenticated && newStatus.analytics.hasSelection
-      });
-
       setIntegrationStatus(newStatus);
 
       // Mostrar celebração se desbloqueou (só se não estava disponível antes E se não passou do limite)
       if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable && celebrationCount < 2) {
         setTimeout(() => {
-          console.log('🎉 Integração cruzada desbloqueada!');
           setShowCelebration('whatsapp-analytics');
           const newCount = celebrationCount + 1;
           setCelebrationCount(newCount);
@@ -153,7 +109,26 @@ const Integrations = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [whatsappStatus.connected, whatsappStatus.authenticated, integrationStatus, celebrationCount]);
+
+  // Carregar contador de celebrações do localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('celebration-count');
+    if (stored) {
+      setCelebrationCount(parseInt(stored));
+    }
+  }, []);
+
+  useEffect(() => {
+    checkIntegrationsStatus();
+  }, [checkIntegrationsStatus]);
+
+  // Atualizar quando o status do WhatsApp mudar (via Socket.IO)
+  useEffect(() => {
+    if (!loading) { // Só atualizar após o carregamento inicial
+      checkIntegrationsStatus();
+    }
+  }, [whatsappStatus.connected, whatsappStatus.authenticated, loading, checkIntegrationsStatus]);
 
   const handleIntegrationClick = (integrationId: string) => {
     if (integrationId === 'facebook' || integrationId === 'instagram') {
@@ -214,26 +189,6 @@ const Integrations = () => {
   const analyticsConnected = integrationStatus.analytics.authenticated && integrationStatus.analytics.hasSelection;
   const crossIntegrationActive = whatsappConnected && analyticsConnected;
   const connectedCount = (whatsappConnected ? 1 : 0) + (analyticsConnected ? 1 : 0);
-
-  // DEBUG: Log das variáveis calculadas para verificar se estão corretas
-  console.log('🔍 [DEBUG] Calculated Variables:', {
-    whatsappConnected,
-    analyticsConnected,
-    crossIntegrationActive,
-    connectedCount,
-    integrationStatus
-  });
-
-  // Force recheck on component mount and when navigation happens
-  useEffect(() => {
-    // Timeout pequeno para garantir que o componente foi montado
-    const timer = setTimeout(() => {
-      console.log('🔄 [DEBUG] Forcing status recheck on component mount');
-      checkIntegrationsStatus();
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, []); // Executa apenas uma vez quando o componente é montado
 
   return (
     <div className="p-6 space-y-8">
