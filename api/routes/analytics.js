@@ -230,12 +230,15 @@ module.exports = (db) => {
                 ]
             });
             
-            const trackedUrl = `${baseUrl}?utm_source=whatsapp&utm_medium=chat&utm_campaign=${campaignName || 'default'}&wa=${trackingId}&tenant=${req.tenant.id}`;
+            // Criar URL de tracking que redireciona e conta o clique
+            const originalUrl = `${baseUrl}?utm_source=whatsapp&utm_medium=chat&utm_campaign=${campaignName || 'default'}&wa=${trackingId}&tenant=${req.tenant.id}`;
+            const trackedUrl = `https://lucrogourmet.shop/track/${trackingId}?tenant=${req.tenant.id}&url=${encodeURIComponent(originalUrl)}`;
             
             res.json({
                 success: true,
                 trackingId: trackingId,
                 trackedUrl: trackedUrl,
+                originalUrl: originalUrl,
                 shortUrl: trackedUrl // Pode ser integrado com encurtador futuramente
             });
             
@@ -289,6 +292,63 @@ module.exports = (db) => {
             });
         }
     });
+
+    return router;
+};
+
+// ROTA PÚBLICA PARA TRACKING (SEM AUTENTICAÇÃO)
+const publicRouter = express.Router();
+
+// Rota pública para capturar cliques (sem autenticação)
+publicRouter.get('/track/:trackingId', async (req, res) => {
+    try {
+        console.log('🔍 [PUBLIC TRACK] Clique capturado:', req.params.trackingId);
+        console.log('🔍 [PUBLIC TRACK] Query params:', req.query);
+        console.log('🔍 [PUBLIC TRACK] Headers:', req.headers);
+        
+        const { trackingId } = req.params;
+        const tenantId = req.query.tenant;
+        
+        if (!trackingId || !tenantId) {
+            console.log('❌ [PUBLIC TRACK] Parâmetros faltando');
+            return res.redirect(req.query.url || '/');
+        }
+        
+        const database = req.app.locals.db;
+        
+        // Registrar clique
+        await database.sequelize.query(`
+            INSERT INTO whatsapp_click_tracking 
+            (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+        `, {
+            replacements: [
+                tenantId,
+                trackingId,
+                req.headers['user-agent'] || '',
+                req.ip || req.connection.remoteAddress || '',
+                req.headers['referer'] || ''
+            ]
+        });
+        
+        console.log('✅ [PUBLIC TRACK] Clique registrado com sucesso');
+        
+        // Redirecionar para a URL original
+        const originalUrl = req.query.url || '/';
+        res.redirect(originalUrl);
+        
+    } catch (error) {
+        console.error('❌ [PUBLIC TRACK] Erro ao registrar clique:', error);
+        res.redirect(req.query.url || '/');
+    }
+});
+
+module.exports = (db) => {
+    const mainRouter = module.exports(db);
+    return mainRouter;
+};
+
+module.exports.publicRouter = publicRouter;
 
     function generateTrackingCode(tenantId) {
         return `

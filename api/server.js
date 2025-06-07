@@ -373,6 +373,47 @@ async function startServer() {
         console.log('🔍 [SERVER DEBUG] Registrando rotas analytics...');
 console.log('🔍 [SERVER DEBUG] analyticsRoutes type:', typeof analyticsRoutes);
 app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes(db));
+
+        // ROTA PÚBLICA PARA TRACKING DE CLIQUES (SEM AUTENTICAÇÃO)
+        app.get('/track/:trackingId', async (req, res) => {
+            try {
+                console.log('🔍 [PUBLIC TRACK] Clique capturado:', req.params.trackingId);
+                console.log('🔍 [PUBLIC TRACK] Query params:', req.query);
+                
+                const { trackingId } = req.params;
+                const tenantId = req.query.tenant;
+                const originalUrl = req.query.url;
+                
+                if (!trackingId || !tenantId) {
+                    console.log('❌ [PUBLIC TRACK] Parâmetros faltando');
+                    return res.redirect(originalUrl || '/');
+                }
+                
+                // Registrar clique
+                await db.sequelize.query(`
+                    INSERT INTO whatsapp_click_tracking 
+                    (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                `, {
+                    replacements: [
+                        tenantId,
+                        trackingId,
+                        req.headers['user-agent'] || '',
+                        req.ip || req.connection.remoteAddress || '',
+                        req.headers['referer'] || ''
+                    ]
+                });
+                
+                console.log('✅ [PUBLIC TRACK] Clique registrado com sucesso');
+                
+                // Redirecionar para a URL original
+                res.redirect(originalUrl || '/');
+                
+            } catch (error) {
+                console.error('❌ [PUBLIC TRACK] Erro ao registrar clique:', error);
+                res.redirect(req.query.url || '/');
+            }
+        });
         
         // Rotas de administração
         const adminRoutes = require('./routes/admin');
