@@ -684,14 +684,14 @@ module.exports = (db) => {
         }
     });
 
-    // 📋 Listar todos os links + conversas recentes (MELHORADO)
+    // 📋 Listar todos os links + conversas recentes (VERSÃO SIMPLIFICADA)
     router.get('/links/manage', async (req, res) => {
         try {
             const database = req.app.locals.db;
             
-            console.log('📋 [MANAGE LINKS] Buscando dados completos para tenant:', req.tenant.id);
+            console.log('📋 [MANAGE LINKS] Buscando dados para tenant:', req.tenant.id);
             
-            // 1. Buscar todos os links do tenant
+            // 1. Buscar links básicos primeiro
             const links = await database.sequelize.query(`
                 SELECT 
                     wtl.id,
@@ -701,121 +701,144 @@ module.exports = (db) => {
                     wtl.link_type,
                     wtl.whatsapp_number,
                     wtl.default_message,
-                    wtl.created_at,
-                    COUNT(DISTINCT wct.id) as total_clicks,
-                    COUNT(DISTINCT wmc.id) as total_correlations,
-                    GROUP_CONCAT(DISTINCT wmc.phone_number) as correlated_numbers
+                    wtl.created_at
                 FROM whatsapp_tracking_links wtl
-                LEFT JOIN whatsapp_click_tracking wct ON wtl.tracking_id = wct.tracking_id
-                LEFT JOIN whatsapp_message_correlation wmc ON wtl.tracking_id = wmc.tracking_id
                 WHERE wtl.tenant_id = ?
-                GROUP BY wtl.id
                 ORDER BY wtl.created_at DESC
             `, {
                 replacements: [req.tenant.id],
                 type: database.sequelize.QueryTypes.SELECT
             });
 
-            // 2. Buscar conversas recentes SEM correlação (últimas 24h)
+            console.log(`📋 [LINKS] Encontrados ${links.length} links`);
+
+            // 2. Buscar conversas recentes (simplificado)
             const recentConversations = await database.sequelize.query(`
-                SELECT DISTINCT
+                SELECT 
                     c.phone_number,
                     c.conversation_id,
                     c.created_at as conversation_start,
-                    COUNT(m.id) as message_count,
-                    MAX(m.created_at) as last_message,
-                    (
-                        SELECT content 
-                        FROM messages m2 
-                        WHERE m2.conversation_id = c.conversation_id 
-                        AND m2.sender_id = c.phone_number
-                        ORDER BY m2.created_at DESC 
-                        LIMIT 1
-                    ) as last_user_message
+                    c.created_at as last_message
                 FROM conversations c
-                LEFT JOIN messages m ON c.conversation_id = m.conversation_id
                 WHERE c.tenant_id = ? 
-                AND c.created_at >= datetime('now', '-24 hours')
-                GROUP BY c.conversation_id, c.phone_number
-                ORDER BY last_message DESC
+                AND datetime(c.created_at) >= datetime('now', '-24 hours')
+                ORDER BY c.created_at DESC
                 LIMIT 20
             `, {
                 replacements: [req.tenant.id],
                 type: database.sequelize.QueryTypes.SELECT
             });
 
-            console.log(`📋 [MANAGE LINKS] Links: ${links.length}, Conversas recentes: ${recentConversations.length}`);
-            
-            // Para cada link, buscar detalhes da jornada
-            const enrichedLinks = await Promise.all(links.map(async (link) => {
-                // Buscar jornada completa
-                const journey = await database.sequelize.query(`
-                    SELECT 
-                        'click' as event_type,
-                        wct.clicked_at as timestamp,
-                        wct.user_agent,
-                        wct.ip_address,
-                        null as message_content,
-                        null as phone_number
-                    FROM whatsapp_click_tracking wct
-                    WHERE wct.tracking_id = ? AND wct.tenant_id = ?
-                    
-                    UNION ALL
-                    
-                    SELECT 
-                        'message' as event_type,
-                        wmc.correlated_at as timestamp,
-                        null as user_agent,
-                        null as ip_address,
-                        wmc.message_content,
-                        wmc.phone_number
-                    FROM whatsapp_message_correlation wmc
-                    WHERE wmc.tracking_id = ? AND wmc.tenant_id = ?
-                    
-                    ORDER BY timestamp ASC
-                `, {
-                    replacements: [link.tracking_id, req.tenant.id, link.tracking_id, req.tenant.id],
-                    type: database.sequelize.QueryTypes.SELECT
-                });
-                
-                // Calcular métricas
-                const metrics = {
-                    clickCount: link.total_clicks || 0,
-                    correlationCount: link.total_correlations || 0,
-                    conversionRate: link.total_clicks > 0 ? ((link.total_correlations / link.total_clicks) * 100).toFixed(1) : '0.0',
-                    averageResponseTime: null
-                };
-                
-                // Calcular tempo médio de resposta se houver correlações
-                if (journey.length > 1) {
-                    const clickEvent = journey.find(j => j.event_type === 'click');
-                    const messageEvent = journey.find(j => j.event_type === 'message');
-                    
-                    if (clickEvent && messageEvent) {
-                        const clickTime = new Date(clickEvent.timestamp);
-                        const messageTime = new Date(messageEvent.timestamp);
-                        const responseTimeSeconds = Math.floor((messageTime - clickTime) / 1000);
-                        metrics.averageResponseTime = responseTimeSeconds;
+            console.log(`📋 [CONVERSATIONS] Encontradas ${recentConversations.length} conversas`);
+
+            // 3. Para cada conversa, buscar última mensagem
+            const enrichedConversations = await Promise.all(
+                recentConversations.map(async (conv) => {
+                    try {
+                        const lastMessages = await database.sequelize.query(`
+                            SELECT content, created_at
+                            FROM messages 
+                            WHERE conversation_id = ? AND sender_id = ?
+                            ORDER BY created_at DESC 
+                            LIMIT 1
+                        `, {
+                            replacements: [conv.conversation_id, conv.phone_number],
+                            type: database.sequelize.QueryTypes.SELECT
+                        });
+
+                        const messageCount = await database.sequelize.query(`
+                            SELECT COUNT(*) as count
+                            FROM messages 
+                            WHERE conversation_id = ?
+                        `, {
+                            replacements: [conv.conversation_id],
+                            type: database.sequelize.QueryTypes.SELECT
+                        });
+
+                        return {
+                            ...conv,
+                            last_user_message: lastMessages[0]?.content || 'Sem mensagens',
+                            message_count: messageCount[0]?.count || 0,
+                            last_message: lastMessages[0]?.created_at || conv.conversation_start
+                        };
+                    } catch (error) {
+                        console.error('❌ Erro ao enriquecer conversa:', error);
+                        return {
+                            ...conv,
+                            last_user_message: 'Erro ao carregar',
+                            message_count: 0,
+                            last_message: conv.conversation_start
+                        };
                     }
+                })
+            );
+
+            console.log(`📋 [MANAGE LINKS] Processamento concluído`);
+            
+            // 4. Para cada link, buscar métricas simples
+            const enrichedLinks = await Promise.all(links.map(async (link) => {
+                try {
+                    // Contar cliques
+                    const clicksResult = await database.sequelize.query(`
+                        SELECT COUNT(*) as count
+                        FROM whatsapp_click_tracking 
+                        WHERE tracking_id = ? AND tenant_id = ?
+                    `, {
+                        replacements: [link.tracking_id, req.tenant.id],
+                        type: database.sequelize.QueryTypes.SELECT
+                    });
+
+                    // Contar correlações
+                    const correlationsResult = await database.sequelize.query(`
+                        SELECT COUNT(*) as count
+                        FROM whatsapp_message_correlation 
+                        WHERE tracking_id = ? AND tenant_id = ?
+                    `, {
+                        replacements: [link.tracking_id, req.tenant.id],
+                        type: database.sequelize.QueryTypes.SELECT
+                    });
+
+                    const clickCount = clicksResult[0]?.count || 0;
+                    const correlationCount = correlationsResult[0]?.count || 0;
+                    
+                    // Calcular métricas
+                    const metrics = {
+                        clickCount: parseInt(clickCount),
+                        correlationCount: parseInt(correlationCount),
+                        conversionRate: clickCount > 0 ? ((correlationCount / clickCount) * 100).toFixed(1) : '0.0',
+                        averageResponseTime: null
+                    };
+                    
+                    return {
+                        ...link,
+                        journey: [], // Simplificado por enquanto
+                        metrics: metrics
+                    };
+                } catch (error) {
+                    console.error(`❌ Erro ao processar link ${link.tracking_id}:`, error);
+                    return {
+                        ...link,
+                        journey: [],
+                        metrics: {
+                            clickCount: 0,
+                            correlationCount: 0,
+                            conversionRate: '0.0',
+                            averageResponseTime: null
+                        }
+                    };
                 }
-                
-                return {
-                    ...link,
-                    journey: journey,
-                    metrics: metrics
-                };
             }));
             
-            console.log(`📋 [MANAGE LINKS] Encontrados ${enrichedLinks.length} links`);
+            console.log(`📋 [MANAGE LINKS] Links processados: ${enrichedLinks.length}`);
             
             res.json({
                 success: true,
                 data: {
                     links: enrichedLinks,
-                    recentConversations: recentConversations,
+                    recentConversations: enrichedConversations,
                     summary: {
                         totalLinks: enrichedLinks.length,
-                        totalConversations: recentConversations.length,
+                        totalConversations: enrichedConversations.length,
                         totalClicks: enrichedLinks.reduce((sum, link) => sum + (link.metrics?.clickCount || 0), 0),
                         totalCorrelations: enrichedLinks.reduce((sum, link) => sum + (link.metrics?.correlationCount || 0), 0)
                     }
