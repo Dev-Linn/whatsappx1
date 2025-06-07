@@ -4,7 +4,7 @@
 const ApiDatabase = require('./database');
 
 async function resetEverything() {
-    console.log('🔄 Resetando TUDO no banco de dados...\n');
+    console.log('🔄 Resetando TUDO nos DOIS bancos de dados...\n');
     
     const db = new ApiDatabase();
     await db.initialize();
@@ -127,6 +127,85 @@ async function resetEverything() {
                     console.log(`   💥 ${table}: ${finalCounts[table]} registros`);
                 }
             }
+        }
+        // ==================== LIMPAR CHATBOT.DB TAMBÉM ====================
+        console.log('\n\n🔥 AGORA VAMOS LIMPAR O CHATBOT.DB TAMBÉM!\n');
+        
+        // Conectar diretamente ao chatbot.db
+        const chatbotDbPath = '../backend/data/chatbot.db';
+        
+        try {
+            // Usar raw query para conectar ao chatbot.db
+            const chatbotTables = await db.sequelize.query(`
+                ATTACH DATABASE '${chatbotDbPath}' AS chatbot;
+                SELECT name FROM chatbot.sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';
+            `, {
+                type: db.sequelize.QueryTypes.SELECT
+            });
+            
+            console.log(`📋 TABELAS NO CHATBOT.DB: ${chatbotTables.map(t => t.name).join(', ')}`);
+            
+            // Contar registros no chatbot.db
+            console.log('\n📊 CONTANDO REGISTROS NO CHATBOT.DB:');
+            let chatbotTotalRecords = 0;
+            
+            for (const table of chatbotTables) {
+                try {
+                    const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM chatbot.${table.name}`);
+                    const count = result[0]?.count || 0;
+                    chatbotTotalRecords += count;
+                    console.log(`📋 chatbot.${table.name}: ${count}`);
+                } catch (error) {
+                    console.log(`❌ chatbot.${table.name}: Erro - ${error.message}`);
+                }
+            }
+            
+            console.log(`\n🔢 TOTAL NO CHATBOT.DB: ${chatbotTotalRecords}`);
+            
+            // Apagar todas as tabelas do chatbot.db
+            if (chatbotTotalRecords > 0) {
+                console.log(`\n🔥 LIMPANDO CHATBOT.DB...`);
+                
+                for (const table of chatbotTables) {
+                    try {
+                        await db.sequelize.query(`DELETE FROM chatbot.${table.name}`);
+                        console.log(`  ✅ chatbot.${table.name} - APAGADO`);
+                    } catch (error) {
+                        console.log(`  ❌ chatbot.${table.name} - ERRO: ${error.message}`);
+                    }
+                }
+                
+                // Verificar se limpou o chatbot.db
+                console.log('\n📊 VERIFICANDO CHATBOT.DB APÓS LIMPEZA:');
+                let finalChatbotRecords = 0;
+                
+                for (const table of chatbotTables) {
+                    try {
+                        const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM chatbot.${table.name}`);
+                        const count = result[0]?.count || 0;
+                        finalChatbotRecords += count;
+                        console.log(`📋 chatbot.${table.name}: ${count}`);
+                    } catch (error) {
+                        console.log(`❌ chatbot.${table.name}: Erro`);
+                    }
+                }
+                
+                console.log(`\n🔢 TOTAL NO CHATBOT.DB APÓS LIMPEZA: ${finalChatbotRecords}`);
+                
+                if (finalChatbotRecords === 0) {
+                    console.log('🎉 CHATBOT.DB TAMBÉM FOI LIMPO!');
+                } else {
+                    console.log('💀 CHATBOT.DB AINDA TEM DADOS!');
+                }
+            } else {
+                console.log('✅ CHATBOT.DB já estava vazio');
+            }
+            
+            // Desconectar do chatbot.db
+            await db.sequelize.query('DETACH DATABASE chatbot');
+            
+        } catch (error) {
+            console.error('❌ Erro ao limpar chatbot.db:', error);
         }
         
     } catch (error) {
