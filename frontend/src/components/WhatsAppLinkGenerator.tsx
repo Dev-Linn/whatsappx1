@@ -32,13 +32,25 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
   const { toast } = useToast();
 
   const generateLink = async () => {
-    if (!baseUrl.trim()) {
-      toast({
-        variant: "destructive",
-        title: "URL obrigatória",
-        description: "Por favor, insira a URL do seu site"
-      });
-      return;
+    // Validações baseadas no tipo de link
+    if (linkType === 'whatsapp') {
+      if (!whatsappNumber.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Número obrigatório",
+          description: "Por favor, insira o número do WhatsApp"
+        });
+        return;
+      }
+    } else {
+      if (!baseUrl.trim()) {
+        toast({
+          variant: "destructive",
+          title: "URL obrigatória",
+          description: "Por favor, insira a URL do destino"
+        });
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -120,7 +132,7 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl bg-gray-900 border-gray-700">
+      <DialogContent className="max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto bg-gray-900 border-gray-700">
         <DialogHeader>
           <DialogTitle className="text-white flex items-center">
             <MessageSquare className="h-5 w-5 mr-2 text-green-500" />
@@ -245,22 +257,40 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="bg-gray-900 p-3 rounded border font-mono text-xs text-green-400">
-                    {baseUrl || 'https://meuloja.com.br/produtos'}
-                    <span className="text-blue-400">
-                      ?utm_source=whatsapp&utm_medium=chat&utm_campaign=
-                      {campaignName || 'whatsapp_campaign'}
-                      &wa=TRACKING_ID&tenant=TENANT_ID
-                    </span>
+                  <div className="bg-gray-900 p-3 rounded border font-mono text-xs break-all">
+                    {linkType === 'whatsapp' ? (
+                      <>
+                        <span className="text-green-400">https://lucrogourmet.shop/track/TRACKING_ID</span>
+                        <span className="text-blue-400">?tenant=TENANT_ID</span>
+                        <div className="mt-2 text-yellow-400">
+                          👆 {useIntermediatePage ? 'Página intermediária' : 'Redirecionamento direto'} para:
+                        </div>
+                        <div className="text-green-400 mt-1">
+                          https://wa.me/{whatsappNumber.replace(/\D/g, '') || '5534999999999'}?text=
+                          {encodeURIComponent(defaultMessage || 'Olá! Vim através do link rastreado.')}
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-green-400">https://lucrogourmet.shop/track/TRACKING_ID</span>
+                        <span className="text-blue-400">?tenant=TENANT_ID&url={baseUrl || 'https://meuloja.com.br'}</span>
+                        <div className="mt-2 text-yellow-400">
+                          👆 Redirecionamento direto para: {baseUrl || 'https://meuloja.com.br/produtos'}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 mt-2">
-                    Este link permitirá rastrear cada clique e conversão
+                    {linkType === 'whatsapp' && useIntermediatePage 
+                      ? 'Coletará localização, tempo na página e outros dados antes de abrir WhatsApp'
+                      : 'Este link permitirá rastrear cada clique e conversão'
+                    }
                   </p>
                 </CardContent>
               </Card>
 
               {/* Benefícios */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <h4 className="text-white font-medium flex items-center text-sm">
                     <TrendingUp className="h-4 w-4 mr-2 text-green-500" />
@@ -268,8 +298,8 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
                   </h4>
                   <ul className="text-sm text-gray-400 space-y-1">
                     <li>• Quem clicou no link</li>
-                    <li>• Tempo gasto no site</li>
-                    <li>• Páginas visitadas</li>
+                    <li>• {linkType === 'whatsapp' && useIntermediatePage ? 'Localização e tempo na página' : 'Tempo gasto no site'}</li>
+                    <li>• {linkType === 'whatsapp' ? 'Abertura do WhatsApp' : 'Páginas visitadas'}</li>
                     <li>• Conversões realizadas</li>
                   </ul>
                 </div>
@@ -279,10 +309,21 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
                     Como usar o link:
                   </h4>
                   <ul className="text-sm text-gray-400 space-y-1">
-                    <li>• Cole no seu bot WhatsApp</li>
-                    <li>• Envie em mensagens manuais</li>
-                    <li>• Use em campanhas específicas</li>
-                    <li>• Monitore no Analytics</li>
+                    {linkType === 'whatsapp' ? (
+                      <>
+                        <li>• Compartilhe em redes sociais</li>
+                        <li>• Envie por email/SMS</li>
+                        <li>• Use em anúncios online</li>
+                        <li>• Cole em bio de Instagram</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>• Cole no seu bot WhatsApp</li>
+                        <li>• Envie em mensagens manuais</li>
+                        <li>• Use em campanhas específicas</li>
+                        <li>• Monitore no Analytics</li>
+                      </>
+                    )}
                   </ul>
                 </div>
               </div>
