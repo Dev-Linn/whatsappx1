@@ -32,9 +32,20 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
   const { toast } = useToast();
 
   const generateLink = async () => {
+    console.log('🔍 [DEBUG] Botão clicado! Tipo:', linkType);
+    console.log('🔍 [DEBUG] Dados:', { 
+      linkType, 
+      baseUrl: baseUrl.trim(), 
+      whatsappNumber: whatsappNumber.trim(),
+      defaultMessage: defaultMessage.trim(),
+      campaignName: campaignName.trim(),
+      useIntermediatePage 
+    });
+
     // Validações baseadas no tipo de link
     if (linkType === 'whatsapp') {
       if (!whatsappNumber.trim()) {
+        console.log('❌ [DEBUG] Número do WhatsApp vazio');
         toast({
           variant: "destructive",
           title: "Número obrigatório",
@@ -44,6 +55,7 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
       }
     } else {
       if (!baseUrl.trim()) {
+        console.log('❌ [DEBUG] URL vazia');
         toast({
           variant: "destructive",
           title: "URL obrigatória",
@@ -53,29 +65,39 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
       }
     }
 
+    console.log('✅ [DEBUG] Validações passaram, fazendo requisição...');
     setIsLoading(true);
     
     try {
       const token = localStorage.getItem('whatsapp_bot_token');
+      console.log('🔍 [DEBUG] Token:', token ? `${token.substring(0, 20)}...` : 'NULL');
+      
+      const requestBody = {
+        linkType: linkType,
+        destinationUrl: linkType !== 'whatsapp' ? baseUrl.trim() : null,
+        whatsappNumber: linkType === 'whatsapp' ? whatsappNumber.trim() : null,
+        message: linkType === 'whatsapp' ? defaultMessage.trim() : null,
+        campaignName: campaignName.trim() || 'whatsapp_campaign',
+        useIntermediatePage: linkType === 'whatsapp' ? useIntermediatePage : false,
+        defaultMessage: linkType === 'whatsapp' ? defaultMessage.trim() : null
+      };
+      
+      console.log('🔍 [DEBUG] Request body:', requestBody);
+      
       const response = await fetch('/api/v1/analytics/integration/generate-link', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          linkType: linkType,
-          destinationUrl: linkType === 'website' ? baseUrl.trim() : null,
-          whatsappNumber: linkType === 'whatsapp' ? whatsappNumber : null,
-          message: linkType === 'whatsapp' ? defaultMessage : null,
-          campaignName: campaignName.trim() || 'whatsapp_campaign',
-          useIntermediatePage: useIntermediatePage,
-          defaultMessage: defaultMessage.trim() || null
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('🔍 [DEBUG] Response status:', response.status);
+      
       if (response.ok) {
         const result = await response.json();
+        console.log('✅ [DEBUG] Response data:', result);
         setGeneratedLink(result.trackedUrl);
         
         toast({
@@ -84,10 +106,11 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
         });
       } else {
         const error = await response.json();
-        throw new Error(error.message || 'Erro ao gerar link');
+        console.error('❌ [DEBUG] Response error:', error);
+        throw new Error(error.error || error.message || 'Erro ao gerar link');
       }
     } catch (error) {
-      console.error('Erro ao gerar link:', error);
+      console.error('❌ [DEBUG] Catch error:', error);
       toast({
         variant: "destructive",
         title: "Erro na Geração",
@@ -329,9 +352,14 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
               </div>
 
               <Button 
-                onClick={generateLink}
-                disabled={isLoading || !baseUrl.trim()}
-                className="w-full bg-green-600 hover:bg-green-700"
+                onClick={(e) => {
+                  e.preventDefault();
+                  console.log('🔍 [DEBUG] Botão clicado!');
+                  generateLink();
+                }}
+                disabled={isLoading || (linkType !== 'whatsapp' && !baseUrl.trim()) || (linkType === 'whatsapp' && !whatsappNumber.trim())}
+                className="w-full bg-green-600 hover:bg-green-700 cursor-pointer"
+                type="button"
               >
                 {isLoading ? (
                   <>
