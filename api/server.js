@@ -362,6 +362,48 @@ async function startServer() {
         // Rotas de monitoramento (públicas para health check)
         app.use('/api/v1/monitoring', monitoringRoutes);
         
+        // ROTA PÚBLICA PARA TRACKING DE CLIQUES (SEM AUTENTICAÇÃO) - DEVE VIR ANTES DAS AUTENTICADAS
+        app.get('/track/:trackingId', async (req, res) => {
+            try {
+                console.log('🔍 [PUBLIC TRACK] Clique capturado:', req.params.trackingId);
+                console.log('🔍 [PUBLIC TRACK] Query params:', req.query);
+                console.log('🔍 [PUBLIC TRACK] Headers:', req.headers);
+                
+                const { trackingId } = req.params;
+                const tenantId = req.query.tenant;
+                const originalUrl = req.query.url;
+                
+                if (!trackingId || !tenantId) {
+                    console.log('❌ [PUBLIC TRACK] Parâmetros faltando:', { trackingId, tenantId });
+                    return res.redirect(originalUrl || 'https://wa.me/5534999999999');
+                }
+                
+                // Registrar clique
+                await db.sequelize.query(`
+                    INSERT INTO whatsapp_click_tracking 
+                    (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
+                    VALUES (?, ?, ?, ?, ?, datetime('now'))
+                `, {
+                    replacements: [
+                        tenantId,
+                        trackingId,
+                        req.headers['user-agent'] || '',
+                        req.ip || req.connection.remoteAddress || '',
+                        req.headers['referer'] || ''
+                    ]
+                });
+                
+                console.log('✅ [PUBLIC TRACK] Clique registrado com sucesso - redirecionando para:', originalUrl);
+                
+                // Redirecionar para a URL original
+                res.redirect(originalUrl);
+                
+            } catch (error) {
+                console.error('❌ [PUBLIC TRACK] Erro ao registrar clique:', error);
+                res.redirect(req.query.url || 'https://wa.me/5534999999999');
+            }
+        });
+        
         // Configurar rotas da API v1 (com autenticação)
         // Rotas protegidas - requerem JWT
         app.use('/api/v1/dashboard', authenticateToken, tenantIsolation, dashboardRoutes(db));
