@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +51,7 @@ const Integrations = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { whatsappStatus } = useWhatsAppStatus();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
   const checkIntegrationsStatus = useCallback(async () => {
     try {
@@ -81,35 +82,38 @@ const Integrations = () => {
         analytics: analyticsStatus
       };
 
-      // Verificar se desbloqueou nova integração cruzada
-      const wasWhatsappAnalyticsAvailable = integrationStatus.whatsapp.connected && 
-                                           integrationStatus.whatsapp.authenticated && 
-                                           integrationStatus.analytics.authenticated && 
-                                           integrationStatus.analytics.hasSelection;
+      // Capturar status anterior para comparação (sem dependência circular)
+      setIntegrationStatus(prevStatus => {
+        // Verificar se desbloqueou nova integração cruzada
+        const wasWhatsappAnalyticsAvailable = prevStatus.whatsapp.connected && 
+                                             prevStatus.whatsapp.authenticated && 
+                                             prevStatus.analytics.authenticated && 
+                                             prevStatus.analytics.hasSelection;
 
-      const isWhatsappAnalyticsAvailable = newStatus.whatsapp.connected && 
-                                          newStatus.whatsapp.authenticated && 
-                                          newStatus.analytics.authenticated && 
-                                          newStatus.analytics.hasSelection;
+        const isWhatsappAnalyticsAvailable = newStatus.whatsapp.connected && 
+                                            newStatus.whatsapp.authenticated && 
+                                            newStatus.analytics.authenticated && 
+                                            newStatus.analytics.hasSelection;
 
-      setIntegrationStatus(newStatus);
+        // Mostrar celebração se desbloqueou (só se não estava disponível antes E se não passou do limite)
+        if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable && celebrationCount < 2) {
+          setTimeout(() => {
+            setShowCelebration('whatsapp-analytics');
+            const newCount = celebrationCount + 1;
+            setCelebrationCount(newCount);
+            localStorage.setItem('celebration-count', newCount.toString());
+          }, 1000);
+        }
 
-      // Mostrar celebração se desbloqueou (só se não estava disponível antes E se não passou do limite)
-      if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable && celebrationCount < 2) {
-        setTimeout(() => {
-          setShowCelebration('whatsapp-analytics');
-          const newCount = celebrationCount + 1;
-          setCelebrationCount(newCount);
-          localStorage.setItem('celebration-count', newCount.toString());
-        }, 1000);
-      }
+        return newStatus;
+      });
 
     } catch (error) {
       console.error('Erro ao verificar integrações:', error);
     } finally {
       setLoading(false);
     }
-  }, [whatsappStatus.connected, whatsappStatus.authenticated, integrationStatus, celebrationCount]);
+  }, [whatsappStatus.connected, whatsappStatus.authenticated, celebrationCount]);
 
   // Carregar contador de celebrações do localStorage
   useEffect(() => {
@@ -123,11 +127,26 @@ const Integrations = () => {
     checkIntegrationsStatus();
   }, [checkIntegrationsStatus]);
 
-  // Atualizar quando o status do WhatsApp mudar (via Socket.IO)
+  // Atualizar quando o status do WhatsApp mudar (via Socket.IO) com debounce
   useEffect(() => {
     if (!loading) { // Só atualizar após o carregamento inicial
-      checkIntegrationsStatus();
+      // Limpar timeout anterior se existir
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      
+      // Criar novo timeout com debounce de 500ms
+      debounceRef.current = setTimeout(() => {
+        checkIntegrationsStatus();
+      }, 500);
     }
+
+    // Cleanup do timeout
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
   }, [whatsappStatus.connected, whatsappStatus.authenticated, loading, checkIntegrationsStatus]);
 
   const handleIntegrationClick = (integrationId: string) => {
