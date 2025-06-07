@@ -1,16 +1,14 @@
 // Script para verificar se o tracking de cliques está funcionando
 
-const database = require('./database');
+const ApiDatabase = require('./database');
 
 async function testClickTracking() {
     console.log('🔍 [CLICK TRACKING] Verificando cliques rastreados...');
     
     try {
-        // Inicializar banco se necessário
-        if (!database.sequelize) {
-            console.log('🔄 Inicializando conexão com banco...');
-            await database.initializeDatabase();
-        }
+        // Inicializar banco
+        const database = new ApiDatabase();
+        await database.initialize();
         
         // Verificar links criados
         const links = await database.sequelize.query(`
