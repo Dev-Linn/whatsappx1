@@ -37,24 +37,44 @@ async function resetEverything() {
         await db.sequelize.query('PRAGMA foreign_keys = OFF');
         console.log('  🔓 Foreign keys desabilitadas');
         
-        // Usar SQL direto para garantir que limpe tudo
-        await db.sequelize.query('DELETE FROM api_costs');
-        console.log('  ✅ api_costs - SQL direto');
+        // Usar SQL direto para garantir que limpe TODAS as tabelas
+        const allTables = [
+            // Core do sistema
+            'api_costs',
+            'messages', 
+            'conversations',
+            'tenant_prompts',
+            'users',
+            'tenants',
+            
+            // Analytics e tracking
+            'whatsapp_tracking_links',
+            'whatsapp_click_tracking', 
+            'whatsapp_message_correlation',
+            'google_analytics_tokens',
+            'google_analytics_selections',
+            
+            // Sistema de logs
+            'system_logs',
+            'uptime_records',
+            
+            // Outros possíveis
+            'tenant_settings',
+            'webhook_logs',
+            'api_usage',
+            'session_data'
+        ];
         
-        await db.sequelize.query('DELETE FROM messages');
-        console.log('  ✅ messages - SQL direto');
+        console.log(`📋 Tentando limpar ${allTables.length} tabelas possíveis...`);
         
-        await db.sequelize.query('DELETE FROM conversations');
-        console.log('  ✅ conversations - SQL direto');
-        
-        await db.sequelize.query('DELETE FROM tenant_prompts');
-        console.log('  ✅ tenant_prompts - SQL direto');
-        
-        await db.sequelize.query('DELETE FROM users');
-        console.log('  ✅ users - SQL direto');
-        
-        await db.sequelize.query('DELETE FROM tenants');
-        console.log('  ✅ tenants - SQL direto');
+        for (const table of allTables) {
+            try {
+                await db.sequelize.query(`DELETE FROM ${table}`);
+                console.log(`  ✅ ${table} - SQL direto`);
+            } catch (error) {
+                console.log(`  ⚠️ ${table} - Tabela não existe ou erro: ${error.message}`);
+            }
+        }
         
         console.log('\n🔄 RESETANDO AUTO_INCREMENT AGGRESSIVAMENTE...');
         
@@ -70,21 +90,28 @@ async function resetEverything() {
         await db.sequelize.query('PRAGMA foreign_keys = ON');
         console.log('  🔒 Foreign keys reabilitadas');
         
-        // Verificar resultado
+        // Verificar resultado de todas as tabelas principais
         console.log('\n📊 DADOS APÓS LIMPEZA:');
-        const finalTenantCount = await db.Tenant.count();
-        const finalUserCount = await db.User.count();
-        const finalConversationCount = await db.Conversation.count();
-        const finalMessageCount = await db.Message.count();
-        const finalCostCount = await db.ApiCost.count();
-        const finalPromptCount = await db.TenantPrompt.count();
         
-        console.log(`🏢 Tenants: ${finalTenantCount}`);
-        console.log(`👥 Usuários: ${finalUserCount}`);
-        console.log(`💬 Conversas: ${finalConversationCount}`);
-        console.log(`📝 Mensagens: ${finalMessageCount}`);
-        console.log(`💰 Custos: ${finalCostCount}`);
-        console.log(`🤖 Prompts: ${finalPromptCount}`);
+        const finalCounts = {};
+        for (const table of ['tenants', 'users', 'conversations', 'messages', 'api_costs', 'tenant_prompts', 'whatsapp_tracking_links', 'whatsapp_click_tracking', 'whatsapp_message_correlation']) {
+            try {
+                const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM ${table}`);
+                finalCounts[table] = result[0]?.count || 0;
+            } catch (error) {
+                finalCounts[table] = 'N/A';
+            }
+        }
+        
+        console.log(`🏢 Tenants: ${finalCounts.tenants}`);
+        console.log(`👥 Usuários: ${finalCounts.users}`);
+        console.log(`💬 Conversas: ${finalCounts.conversations}`);
+        console.log(`📝 Mensagens: ${finalCounts.messages}`);
+        console.log(`💰 Custos: ${finalCounts.api_costs}`);
+        console.log(`🤖 Prompts: ${finalCounts.tenant_prompts}`);
+        console.log(`🔗 Links Tracking: ${finalCounts.whatsapp_tracking_links}`);
+        console.log(`👆 Cliques: ${finalCounts.whatsapp_click_tracking}`);
+        console.log(`🔄 Correlações: ${finalCounts.whatsapp_message_correlation}`);
         
         // Testar criação de novo tenant para verificar se AUTO_INCREMENT foi resetado
         console.log('\n🧪 TESTANDO AUTO_INCREMENT...');

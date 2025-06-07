@@ -27,7 +27,8 @@ import {
   Smartphone,
   CheckCircle,
   AlertCircle,
-  Link2
+  Link2,
+  Users
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -375,8 +376,7 @@ const LinkManagement: React.FC = () => {
                                  return (
                    <Card 
                      key={link.tracking_id} 
-                     className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${status.borderColor} border-2 cursor-pointer`}
-                     onClick={() => fetchLinkLeads(link.tracking_id, link)}
+                     className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${status.borderColor} border-2`}
                    >
                      {/* Header com gradiente */}
                      <div className={`${status.bgColor} px-6 py-4 border-b ${status.borderColor}`}>
@@ -473,18 +473,21 @@ const LinkManagement: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Indicador de clique para ver leads */}
-                      <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <p className="text-sm text-blue-800 font-medium mb-2">
-                          👆 Clique no card para ver todos os leads
-                        </p>
+                      {/* Botões de Ação */}
+                      <div className="space-y-2">
                         <Button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(link.base_url, '_blank');
-                          }} 
+                          onClick={() => fetchLinkLeads(link.tracking_id, link)}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          size="sm"
+                        >
+                          <Users className="w-4 h-4 mr-2" />
+                          Ver Leads Vinculados ({link.metrics.correlationCount})
+                        </Button>
+                        
+                        <Button 
+                          onClick={() => window.open(link.base_url, '_blank')} 
                           variant="outline"
-                          className="border-green-600 text-green-600 hover:bg-green-50"
+                          className="w-full border-green-600 text-green-600 hover:bg-green-50"
                           size="sm"
                         >
                           <ExternalLink className="w-4 h-4 mr-2" />
