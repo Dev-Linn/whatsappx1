@@ -215,6 +215,26 @@ const Integrations = () => {
   const crossIntegrationActive = whatsappConnected && analyticsConnected;
   const connectedCount = (whatsappConnected ? 1 : 0) + (analyticsConnected ? 1 : 0);
 
+  // DEBUG: Log das variáveis calculadas para verificar se estão corretas
+  console.log('🔍 [DEBUG] Calculated Variables:', {
+    whatsappConnected,
+    analyticsConnected,
+    crossIntegrationActive,
+    connectedCount,
+    integrationStatus
+  });
+
+  // Force recheck on component mount and when navigation happens
+  useEffect(() => {
+    // Timeout pequeno para garantir que o componente foi montado
+    const timer = setTimeout(() => {
+      console.log('🔄 [DEBUG] Forcing status recheck on component mount');
+      checkIntegrationsStatus();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []); // Executa apenas uma vez quando o componente é montado
+
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
