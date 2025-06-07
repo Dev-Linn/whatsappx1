@@ -26,7 +26,8 @@ import {
   MapPin,
   Smartphone,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Link2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -56,8 +57,28 @@ interface LinkData {
   };
 }
 
+interface ConversationData {
+  phone_number: string;
+  conversation_id: string;
+  conversation_start: string;
+  message_count: number;
+  last_message: string;
+  last_user_message: string;
+}
+
+interface ApiResponse {
+  links: LinkData[];
+  recentConversations: ConversationData[];
+  summary: {
+    totalLinks: number;
+    totalConversations: number;
+    totalClicks: number;
+    totalCorrelations: number;
+  };
+}
+
 const LinkManagement: React.FC = () => {
-  const [links, setLinks] = useState<LinkData[]>([]);
+  const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; link: LinkData | null }>({
     open: false,
@@ -67,6 +88,7 @@ const LinkManagement: React.FC = () => {
     open: false,
     link: null
   });
+  const [activeSection, setActiveSection] = useState<'links' | 'conversations'>('links');
 
   const fetchLinks = async () => {
     try {
@@ -80,8 +102,8 @@ const LinkManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        setLinks(data.data || []);
+        const responseData = await response.json();
+        setData(responseData.data || null);
       } else {
         console.error('Erro ao carregar links');
       }
@@ -104,7 +126,12 @@ const LinkManagement: React.FC = () => {
       });
 
       if (response.ok) {
-        setLinks(links.filter(link => link.tracking_id !== trackingId));
+        if (data?.links) {
+          setData({
+            ...data,
+            links: data.links.filter(link => link.tracking_id !== trackingId)
+          });
+        }
         setDeleteDialog({ open: false, link: null });
       } else {
         console.error('Erro ao deletar link');
@@ -205,25 +232,80 @@ const LinkManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Gerenciar Links</h2>
-        <Button onClick={fetchLinks} variant="outline">
-          Atualizar
+        <h2 className="text-2xl font-bold text-gray-900">Gerenciar Links & Conversas</h2>
+        <div className="flex gap-2">
+          <Button onClick={fetchLinks} variant="outline">
+            Atualizar
+          </Button>
+        </div>
+      </div>
+
+      {/* Navegação de Seções */}
+      <div className="flex gap-2 mb-6">
+        <Button
+          variant={activeSection === 'links' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('links')}
+          className="flex items-center gap-2"
+        >
+          <Link2 className="h-4 w-4" />
+          Links ({data?.summary.totalLinks || 0})
+        </Button>
+        <Button
+          variant={activeSection === 'conversations' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('conversations')}
+          className="flex items-center gap-2"
+        >
+          <MessageCircle className="h-4 w-4" />
+          Conversas Recentes ({data?.summary.totalConversations || 0})
         </Button>
       </div>
 
-      {links.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum link criado</h3>
-            <p className="text-gray-500 text-center">
-              Crie seu primeiro link de tracking na aba "Analytics"
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {links.map((link) => (
+      {/* Resumo de Métricas */}
+      {data?.summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-blue-700">{data.summary.totalLinks}</div>
+              <div className="text-sm text-blue-600">Links Criados</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-green-700">{data.summary.totalClicks}</div>
+              <div className="text-sm text-green-600">Total de Cliques</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-purple-700">{data.summary.totalCorrelations}</div>
+              <div className="text-sm text-purple-600">Conversões</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-yellow-700">{data.summary.totalConversations}</div>
+              <div className="text-sm text-yellow-600">Conversas Ativas</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Seção de Links */}
+      {activeSection === 'links' && (
+        <>
+          {!data?.links || data.links.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum link criado</h3>
+                <p className="text-gray-500 text-center">
+                  Crie seu primeiro link de tracking na aba "Analytics"
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {data.links.map((link) => (
             <Card key={link.tracking_id} className="relative overflow-hidden hover:shadow-lg transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -312,7 +394,60 @@ const LinkManagement: React.FC = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Seção de Conversas Recentes */}
+      {activeSection === 'conversations' && (
+        <>
+          {!data?.recentConversations || data.recentConversations.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <MessageCircle className="w-12 h-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma conversa recente</h3>
+                <p className="text-gray-500 text-center">
+                  As conversas dos últimos 24 horas aparecerão aqui
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-4">
+              {data.recentConversations.map((conversation, index) => (
+                <Card key={conversation.conversation_id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start space-x-4">
+                        <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                          <Phone className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 mb-1">
+                            📱 {conversation.phone_number}
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-2">
+                            💬 Última mensagem: "{conversation.last_user_message}"
+                          </p>
+                          <div className="flex items-center gap-4 text-xs text-gray-500">
+                            <span>🕐 {formatDate(conversation.last_message)}</span>
+                            <span>💭 {conversation.message_count} mensagens</span>
+                            <span>📅 Iniciada: {formatDate(conversation.conversation_start)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          Ativa
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {/* Dialog de Confirmação de Delete */}

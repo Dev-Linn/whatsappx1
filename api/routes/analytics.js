@@ -684,14 +684,14 @@ module.exports = (db) => {
         }
     });
 
-    // 📋 Listar todos os links com jornada completa
+    // 📋 Listar todos os links + conversas recentes (MELHORADO)
     router.get('/links/manage', async (req, res) => {
         try {
             const database = req.app.locals.db;
             
-            console.log('📋 [MANAGE LINKS] Buscando links para tenant:', req.tenant.id);
+            console.log('📋 [MANAGE LINKS] Buscando dados completos para tenant:', req.tenant.id);
             
-            // Buscar todos os links do tenant
+            // 1. Buscar todos os links do tenant
             const links = await database.sequelize.query(`
                 SELECT 
                     wtl.id,
@@ -704,7 +704,7 @@ module.exports = (db) => {
                     wtl.created_at,
                     COUNT(DISTINCT wct.id) as total_clicks,
                     COUNT(DISTINCT wmc.id) as total_correlations,
-                    GROUP_CONCAT(wmc.phone_number) as correlated_numbers
+                    GROUP_CONCAT(DISTINCT wmc.phone_number) as correlated_numbers
                 FROM whatsapp_tracking_links wtl
                 LEFT JOIN whatsapp_click_tracking wct ON wtl.tracking_id = wct.tracking_id
                 LEFT JOIN whatsapp_message_correlation wmc ON wtl.tracking_id = wmc.tracking_id
@@ -715,6 +715,36 @@ module.exports = (db) => {
                 replacements: [req.tenant.id],
                 type: database.sequelize.QueryTypes.SELECT
             });
+
+            // 2. Buscar conversas recentes SEM correlação (últimas 24h)
+            const recentConversations = await database.sequelize.query(`
+                SELECT DISTINCT
+                    c.phone_number,
+                    c.conversation_id,
+                    c.created_at as conversation_start,
+                    COUNT(m.id) as message_count,
+                    MAX(m.created_at) as last_message,
+                    (
+                        SELECT content 
+                        FROM messages m2 
+                        WHERE m2.conversation_id = c.conversation_id 
+                        AND m2.sender_id = c.phone_number
+                        ORDER BY m2.created_at DESC 
+                        LIMIT 1
+                    ) as last_user_message
+                FROM conversations c
+                LEFT JOIN messages m ON c.conversation_id = m.conversation_id
+                WHERE c.tenant_id = ? 
+                AND c.created_at >= datetime('now', '-24 hours')
+                GROUP BY c.conversation_id, c.phone_number
+                ORDER BY last_message DESC
+                LIMIT 20
+            `, {
+                replacements: [req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+
+            console.log(`📋 [MANAGE LINKS] Links: ${links.length}, Conversas recentes: ${recentConversations.length}`);
             
             // Para cada link, buscar detalhes da jornada
             const enrichedLinks = await Promise.all(links.map(async (link) => {
@@ -780,7 +810,16 @@ module.exports = (db) => {
             
             res.json({
                 success: true,
-                data: enrichedLinks
+                data: {
+                    links: enrichedLinks,
+                    recentConversations: recentConversations,
+                    summary: {
+                        totalLinks: enrichedLinks.length,
+                        totalConversations: recentConversations.length,
+                        totalClicks: enrichedLinks.reduce((sum, link) => sum + (link.metrics?.clickCount || 0), 0),
+                        totalCorrelations: enrichedLinks.reduce((sum, link) => sum + (link.metrics?.correlationCount || 0), 0)
+                    }
+                }
             });
             
         } catch (error) {
