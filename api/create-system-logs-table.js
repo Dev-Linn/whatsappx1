@@ -36,4 +36,4 @@ async function createSystemLogsTable() {
     }
 }
 
-createSystemLogsTable(); 
+createSystemLogsTable();  
