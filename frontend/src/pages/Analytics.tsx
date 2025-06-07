@@ -89,7 +89,7 @@ const Analytics = () => {
   const [integrationMetrics, setIntegrationMetrics] = useState(null);
   const [isIntegrationConfigured, setIsIntegrationConfigured] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'generator' | 'management'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generator' | 'management'>('management');
   const { toast } = useToast();
 
   // Verificar status de autenticação ao carregar
@@ -684,12 +684,22 @@ const Analytics = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Google Analytics</h1>
-          <p className="text-gray-400">Últimos 30 dias</p>
+          <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+            <div className="text-green-500">📊</div>
+            Central de Leads WhatsApp
+          </h1>
+          <p className="text-gray-400 text-lg">Rastreie e acompanhe todos os seus leads desde o primeiro clique</p>
           {authStatus?.selection && (
-            <Badge variant="outline" className="mt-2 border-green-600 text-green-400">
-              Propriedade: {authStatus.selection.property_id}
-            </Badge>
+            <div className="flex gap-2 mt-3">
+              <Badge variant="outline" className="border-green-600 text-green-400">
+                Analytics: {authStatus.selection.property_id}
+              </Badge>
+              {isIntegrationConfigured && (
+                <Badge variant="outline" className="border-blue-600 text-blue-400">
+                  WhatsApp Integrado
+                </Badge>
+              )}
+            </div>
           )}
         </div>
         <div className="flex gap-2">
@@ -723,7 +733,7 @@ const Analytics = () => {
         </div>
       </div>
 
-      {/* Navegação por Abas */}
+      {/* Navegação por Abas - Nova Estrutura */}
       <div className="mb-8">
         <div className="flex flex-wrap justify-center gap-2 mb-6">
           <Button
@@ -731,8 +741,16 @@ const Analytics = () => {
             onClick={() => setActiveTab('dashboard')}
             className="flex items-center gap-2"
           >
-            <BarChart3 className="h-4 w-4" />
-            Dashboard
+            <TrendingUp className="h-4 w-4" />
+            Visão Geral
+          </Button>
+          <Button
+            variant={activeTab === 'management' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('management')}
+            className="flex items-center gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Links & Leads
           </Button>
           <Button
             variant={activeTab === 'generator' ? 'default' : 'outline'}
@@ -740,42 +758,87 @@ const Analytics = () => {
             className="flex items-center gap-2"
           >
             <Rocket className="h-4 w-4" />
-            Gerar Links
+            Criar Links
           </Button>
-          <Button
-            variant={activeTab === 'management' ? 'default' : 'outline'}
-            onClick={() => setActiveTab('management')}
-            className="flex items-center gap-2"
-          >
-            <Settings className="h-4 w-4" />
-            Gerenciar Links
-          </Button>
+        </div>
+        
+        {/* Descrições das Abas */}
+        <div className="text-center text-sm text-gray-400 mb-4">
+          {activeTab === 'dashboard' && "Métricas gerais e resumo de performance"}
+          {activeTab === 'management' && "Veja todos os leads que vieram por cada link"}
+          {activeTab === 'generator' && "Crie novos links de tracking para WhatsApp"}
         </div>
       </div>
 
       {/* Conteúdo das Abas */}
-      {activeTab === 'generator' && (
+      {activeTab === 'management' && (
         <div className="mb-8">
-          <WhatsAppLinkGenerator isIntegrationConfigured={isIntegrationConfigured} />
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-white mb-2">💼 Gestão de Links & Leads</h2>
+            <p className="text-gray-400">
+              Acompanhe cada link que você criou e veja todos os leads que vieram através dele
+            </p>
+          </div>
+          <LinkManagement />
         </div>
       )}
 
-      {activeTab === 'management' && (
+      {activeTab === 'generator' && (
         <div className="mb-8">
-          <LinkManagement />
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-white mb-2">🚀 Criador de Links</h2>
+            <p className="text-gray-400">
+              Crie links de tracking que conectam WhatsApp com Analytics automaticamente
+            </p>
+          </div>
+          <WhatsAppLinkGenerator isIntegrationConfigured={isIntegrationConfigured} />
         </div>
       )}
 
       {activeTab === 'dashboard' && (
         <div>
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-white mb-2">📈 Visão Geral de Performance</h2>
+            <p className="text-gray-400">
+              Acompanhe as métricas gerais do seu sistema de tracking WhatsApp + Analytics
+            </p>
+          </div>
+
+          {/* Cards de orientação sobre o sistema */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-gradient-to-br from-green-900/30 to-green-800/30 border-green-600">
+              <CardContent className="p-6 text-center">
+                <div className="text-3xl mb-3">🔗</div>
+                <h3 className="text-white font-bold mb-2">1. Crie Links</h3>
+                <p className="text-green-200 text-sm">
+                  Gere links de tracking que conectam WhatsApp com seu Analytics automaticamente
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 border-blue-600">
+              <CardContent className="p-6 text-center">
+                <div className="text-3xl mb-3">📱</div>
+                <h3 className="text-white font-bold mb-2">2. Receba Leads</h3>
+                <p className="text-blue-200 text-sm">
+                  Seus clientes clicam nos links e chegam ao WhatsApp. Cada conversa é automaticamente rastreada
+                </p>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-purple-900/30 to-purple-800/30 border-purple-600">
+              <CardContent className="p-6 text-center">
+                <div className="text-3xl mb-3">📊</div>
+                <h3 className="text-white font-bold mb-2">3. Analise Resultados</h3>
+                <p className="text-purple-200 text-sm">
+                  Veja na aba "Links & Leads" quais links trouxeram mais conversas e o perfil de cada lead
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
       {analyticsData.length === 0 ? (
         <div className="space-y-6">
-          <Alert className="bg-yellow-900/20 border-yellow-600">
-            <AlertDescription className="text-yellow-200">
-              Nenhum dado encontrado para o período selecionado.
-            </AlertDescription>
-          </Alert>
           
           {/* Card de Integração WhatsApp quando não há dados */}
           <Card className="bg-gray-800 border-gray-700">
@@ -917,6 +980,21 @@ const Analytics = () => {
                 <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600 rounded">
                   <p className="text-yellow-200 text-sm">
                     💡 <strong>Insight:</strong> Com essa integração, você saberia que 23 de cada 100 pessoas que clicam nos seus links do WhatsApp fazem uma compra!
+                  </p>
+                </div>
+                
+                {/* Call to Action */}
+                <div className="mt-6 text-center">
+                  <Button 
+                    onClick={() => setActiveTab('management')}
+                    className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white px-8 py-3 text-lg"
+                    size="lg"
+                  >
+                    <Users className="h-5 w-5 mr-2" />
+                    Ver Meus Links & Leads
+                  </Button>
+                  <p className="text-gray-400 text-sm mt-2">
+                    Comece a gerenciar seus leads agora mesmo
                   </p>
                 </div>
               </div>
