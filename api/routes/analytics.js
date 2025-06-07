@@ -13,9 +13,15 @@ module.exports = (db) => {
     
     // Debug middleware
     router.use((req, res, next) => {
+        console.log('🔍 [ANALYTICS DEBUG] =================== INÍCIO ===================');
         console.log('🔍 [ANALYTICS DEBUG] Rota acessada:', req.originalUrl);
-        console.log('🔍 [ANALYTICS DEBUG] Tenant:', req.tenant?.id);
-        console.log('🔍 [ANALYTICS DEBUG] Headers auth:', req.headers['authorization'] ? 'Presente' : 'Ausente');
+        console.log('🔍 [ANALYTICS DEBUG] Método:', req.method);
+        console.log('🔍 [ANALYTICS DEBUG] Headers completos:', JSON.stringify(req.headers, null, 2));
+        console.log('🔍 [ANALYTICS DEBUG] Auth header:', req.headers['authorization']);
+        console.log('🔍 [ANALYTICS DEBUG] Tenant completo:', JSON.stringify(req.tenant, null, 2));
+        console.log('🔍 [ANALYTICS DEBUG] Body:', JSON.stringify(req.body, null, 2));
+        console.log('🔍 [ANALYTICS DEBUG] Query:', JSON.stringify(req.query, null, 2));
+        console.log('🔍 [ANALYTICS DEBUG] =================== FIM ===================');
         next();
     });
 
@@ -171,20 +177,43 @@ module.exports = (db) => {
 
     // Gerar link rastreado para WhatsApp  
     router.post('/integration/generate-link', async (req, res) => {
+        console.log('🔗 [GENERATE LINK] =================== SUPER DEBUG INÍCIO ===================');
         console.log('🔗 [GENERATE LINK] Iniciando geração de link...');
         console.log('🔗 [GENERATE LINK] Tenant ID:', req.tenant?.id);
+        console.log('🔗 [GENERATE LINK] Tenant completo:', JSON.stringify(req.tenant, null, 2));
         console.log('🔗 [GENERATE LINK] Body:', JSON.stringify(req.body, null, 2));
+        console.log('🔗 [GENERATE LINK] Headers:', JSON.stringify(req.headers, null, 2));
+        console.log('🔗 [GENERATE LINK] req.app.locals.db existe?', !!req.app.locals.db);
+        console.log('🔗 [GENERATE LINK] Database:', req.app.locals.db ? 'EXISTE' : 'NÃO EXISTE');
+        console.log('🔗 [GENERATE LINK] =================== SUPER DEBUG FIM ===================');
         try {
+            console.log('🔗 [GENERATE LINK] Entrando no try block...');
             const { baseUrl, campaignName, userId } = req.body;
+            console.log('🔗 [GENERATE LINK] Variáveis extraídas:', { baseUrl, campaignName, userId });
             
             if (!baseUrl) {
+                console.log('🔗 [GENERATE LINK] ❌ URL base não fornecida');
                 return res.status(400).json({
                     error: 'URL base é obrigatória'
                 });
             }
             
+            console.log('🔗 [GENERATE LINK] ✅ URL base válida:', baseUrl);
             const trackingId = `wa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            console.log('🔗 [GENERATE LINK] 🆔 Tracking ID gerado:', trackingId);
+            
             const database = req.app.locals.db;
+            console.log('🔗 [GENERATE LINK] 📊 Database obtido:', database ? 'SUCESSO' : 'FALHOU');
+            console.log('🔗 [GENERATE LINK] 📊 Database.sequelize existe?', !!database?.sequelize);
+            
+            console.log('🔗 [GENERATE LINK] 💾 Tentando salvar no banco...');
+            console.log('🔗 [GENERATE LINK] 💾 Parâmetros da query:', {
+                tenant_id: req.tenant.id,
+                tracking_id: trackingId,
+                base_url: baseUrl,
+                campaign_name: campaignName || 'whatsapp_campaign',
+                user_id: userId || null
+            });
             
             // Salvar link rastreado
             await database.sequelize.query(`
