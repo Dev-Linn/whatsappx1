@@ -47,9 +47,18 @@ const Integrations = () => {
   const [showModal, setShowModal] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [celebrationCount, setCelebrationCount] = useState(0); // Contador de celebrações
   const { toast } = useToast();
   const navigate = useNavigate();
   const { whatsappStatus } = useWhatsAppStatus();
+
+  // Carregar contador de celebrações do localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('celebration-count');
+    if (stored) {
+      setCelebrationCount(parseInt(stored));
+    }
+  }, []);
 
   useEffect(() => {
     checkIntegrationsStatus();
@@ -110,11 +119,14 @@ const Integrations = () => {
 
       setIntegrationStatus(newStatus);
 
-      // Mostrar celebração se desbloqueou (só se não estava disponível antes)
-      if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable) {
+      // Mostrar celebração se desbloqueou (só se não estava disponível antes E se não passou do limite)
+      if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable && celebrationCount < 2) {
         setTimeout(() => {
           console.log('🎉 Integração cruzada desbloqueada!');
           setShowCelebration('whatsapp-analytics');
+          const newCount = celebrationCount + 1;
+          setCelebrationCount(newCount);
+          localStorage.setItem('celebration-count', newCount.toString());
         }, 1000);
       }
 
@@ -170,7 +182,7 @@ const Integrations = () => {
       <div className="p-6">
         <div className="animate-pulse space-y-6">
           <div className="h-8 bg-gray-700 rounded w-64"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[1,2,3,4].map(i => (
               <div key={i} className="h-64 bg-gray-700 rounded-lg"></div>
             ))}
@@ -233,10 +245,10 @@ const Integrations = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* WhatsApp */}
           <Card 
-            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
+            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group h-full flex flex-col"
             onClick={() => handleIntegrationClick('whatsapp')}
           >
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg group-hover:scale-110 transition-transform">
                   <Smartphone className="h-6 w-6 text-white" />
@@ -250,8 +262,8 @@ const Integrations = () => {
               <CardTitle className="text-white">WhatsApp Business</CardTitle>
               <p className="text-gray-400 text-sm">Chatbot inteligente com IA</p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
+              <div className="space-y-2 flex-1">
                 <div className="text-sm text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
                   🤖 Chatbot com IA Gemini
@@ -270,7 +282,7 @@ const Integrations = () => {
                 </div>
               </div>
               <Button 
-                className={`w-full ${
+                className={`w-full mt-auto ${
                   whatsappConnected 
                     ? 'bg-green-600 hover:bg-green-700' 
                     : 'bg-purple-600 hover:bg-purple-700'
@@ -284,10 +296,10 @@ const Integrations = () => {
 
           {/* Analytics */}
           <Card 
-            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
+            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group h-full flex flex-col"
             onClick={() => handleIntegrationClick('analytics')}
           >
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform">
                   <BarChart3 className="h-6 w-6 text-white" />
@@ -301,8 +313,8 @@ const Integrations = () => {
               <CardTitle className="text-white">Google Analytics</CardTitle>
               <p className="text-gray-400 text-sm">Rastreamento e análise completa</p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
+              <div className="space-y-2 flex-1">
                 <div className="text-sm text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
                   📈 Métricas em tempo real
@@ -321,7 +333,7 @@ const Integrations = () => {
                 </div>
               </div>
               <Button 
-                className={`w-full ${
+                className={`w-full mt-auto ${
                   analyticsConnected 
                     ? 'bg-green-600 hover:bg-green-700' 
                     : 'bg-purple-600 hover:bg-purple-700'
@@ -335,10 +347,10 @@ const Integrations = () => {
 
           {/* Facebook */}
           <Card 
-            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
+            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group h-full flex flex-col"
             onClick={() => handleIntegrationClick('facebook')}
           >
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 shadow-lg grayscale">
                   <Facebook className="h-6 w-6 text-white" />
@@ -348,8 +360,8 @@ const Integrations = () => {
               <CardTitle className="text-white">Facebook Ads</CardTitle>
               <p className="text-gray-400 text-sm">Campanhas publicitárias</p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
+              <div className="space-y-2 flex-1">
                 <div className="text-sm text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
                   📢 Campanhas automáticas
@@ -367,7 +379,7 @@ const Integrations = () => {
                   📊 Relatórios unificados
                 </div>
               </div>
-              <Button className="w-full bg-gray-600 cursor-not-allowed" disabled>
+              <Button className="w-full bg-gray-600 cursor-not-allowed mt-auto" disabled>
                 Em Breve
               </Button>
             </CardContent>
@@ -375,10 +387,10 @@ const Integrations = () => {
 
           {/* Instagram */}
           <Card 
-            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group"
+            className="bg-gray-800/50 backdrop-blur border-gray-700 hover:border-gray-600 transition-all cursor-pointer group h-full flex flex-col"
             onClick={() => handleIntegrationClick('instagram')}
           >
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-4 flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div className="p-3 rounded-xl bg-gradient-to-r from-pink-500 to-purple-600 shadow-lg grayscale">
                   <Instagram className="h-6 w-6 text-white" />
@@ -388,8 +400,8 @@ const Integrations = () => {
               <CardTitle className="text-white">Instagram Business</CardTitle>
               <p className="text-gray-400 text-sm">Marketing visual e stories</p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="space-y-4 flex-1 flex flex-col">
+              <div className="space-y-2 flex-1">
                 <div className="text-sm text-gray-300 flex items-center gap-2">
                   <div className="w-1 h-1 bg-purple-400 rounded-full"></div>
                   📸 Posts automáticos
@@ -407,7 +419,7 @@ const Integrations = () => {
                   📈 Analytics detalhado
                 </div>
               </div>
-              <Button className="w-full bg-gray-600 cursor-not-allowed" disabled>
+              <Button className="w-full bg-gray-600 cursor-not-allowed mt-auto" disabled>
                 Em Breve
               </Button>
             </CardContent>
@@ -425,7 +437,7 @@ const Integrations = () => {
           </Badge>
         </h2>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           <Card 
             className={`bg-gray-800/50 backdrop-blur border-gray-700 transition-all cursor-pointer group ${
               crossIntegrationActive ? 'border-purple-500/50 shadow-purple-500/10 shadow-lg' : ''
@@ -480,7 +492,7 @@ const Integrations = () => {
               </div>
 
               {crossIntegrationActive && (
-                <div className="grid grid-cols-2 gap-3 p-3 bg-gray-900/50 rounded-lg">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-gray-900/50 rounded-lg border border-gray-700">
                   <div className="text-center">
                     <div className="text-lg font-bold text-green-400">847</div>
                     <div className="text-xs text-gray-400">Conversas</div>

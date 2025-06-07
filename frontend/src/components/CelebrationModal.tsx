@@ -28,12 +28,12 @@ const CelebrationModal = ({ integrationType, onClose }: CelebrationModalProps) =
 
   useEffect(() => {
     setShowConfetti(true);
-    // Auto-close após 8 segundos
-    const timer = setTimeout(() => {
-      onClose();
-    }, 8000);
+    // REMOVIDO: Auto-close após 8 segundos
+    // const timer = setTimeout(() => {
+    //   onClose();
+    // }, 8000);
 
-    return () => clearTimeout(timer);
+    // return () => clearTimeout(timer);
   }, [onClose]);
 
   const getIntegrationData = () => {
@@ -144,10 +144,10 @@ const CelebrationModal = ({ integrationType, onClose }: CelebrationModalProps) =
               </p>
             </div>
 
-            {/* Animated Badge */}
-            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-full border border-purple-500/30 animate-pulse">
-              <Zap className="h-5 w-5 text-yellow-400" />
-              <span className="text-purple-300 font-semibold">Status: Integração Ativa</span>
+            {/* Animated Badge - MELHORADO */}
+            <div className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-800/30 to-green-700/30 rounded-full border border-green-500/50">
+              <CheckCircle className="h-5 w-5 text-green-400" />
+              <span className="text-green-300 font-semibold">Status: Integração Ativa</span>
             </div>
           </div>
 
@@ -177,18 +177,18 @@ const CelebrationModal = ({ integrationType, onClose }: CelebrationModalProps) =
             ))}
           </div>
 
-          {/* Live Metrics Preview */}
-          <Card className="bg-gradient-to-r from-gray-800/50 to-gray-900/50 backdrop-blur border-purple-500/30">
-            <CardContent className="p-8">
+          {/* Live Metrics Preview - MELHORADO */}
+          <Card className="bg-gray-800/50 backdrop-blur border-gray-700">
+            <CardContent className="p-6">
               <div className="text-center mb-6">
                 <h4 className="text-2xl font-bold text-white flex items-center justify-center gap-2">
-                  <TrendingUp className="h-6 w-6 text-green-400" />
+                  <TrendingUp className="h-6 w-6 text-purple-400" />
                   Primeiras Métricas Integradas
                 </h4>
                 <p className="text-gray-300 mt-2">Dados em tempo real da sua nova integração</p>
               </div>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="text-center p-4 bg-gray-900/50 rounded-xl border border-gray-700">
                   <MessageSquare className="h-8 w-8 text-green-400 mx-auto mb-2" />
                   <div className="text-2xl font-bold text-green-400">{integrationData.metrics.conversations}</div>
@@ -213,11 +213,11 @@ const CelebrationModal = ({ integrationType, onClose }: CelebrationModalProps) =
             </CardContent>
           </Card>
 
-          {/* Action Buttons */}
+          {/* Action Buttons - MELHORADO */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               onClick={handleViewDashboard}
-              className={`bg-gradient-to-r ${integrationData.color} hover:opacity-90 text-lg px-8 py-6 text-white font-semibold`}
+              className="bg-purple-600 hover:bg-purple-700 text-lg px-8 py-6 text-white font-semibold"
             >
               🚀 Ver Dashboard Completo
               <ArrowRight className="w-5 h-5 ml-2" />
