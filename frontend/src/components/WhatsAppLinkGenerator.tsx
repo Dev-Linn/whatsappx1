@@ -23,6 +23,10 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
   const [isOpen, setIsOpen] = useState(false);
   const [baseUrl, setBaseUrl] = useState("");
   const [campaignName, setCampaignName] = useState("");
+  const [linkType, setLinkType] = useState("website");
+  const [whatsappNumber, setWhatsappNumber] = useState("5534999999999");
+  const [defaultMessage, setDefaultMessage] = useState("");
+  const [useIntermediatePage, setUseIntermediatePage] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -48,9 +52,13 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          linkType: 'website',
-          destinationUrl: baseUrl.trim(),
-          campaignName: campaignName.trim() || 'whatsapp_campaign'
+          linkType: linkType,
+          destinationUrl: linkType === 'website' ? baseUrl.trim() : null,
+          whatsappNumber: linkType === 'whatsapp' ? whatsappNumber : null,
+          message: linkType === 'whatsapp' ? defaultMessage : null,
+          campaignName: campaignName.trim() || 'whatsapp_campaign',
+          useIntermediatePage: useIntermediatePage,
+          defaultMessage: defaultMessage.trim() || null
         })
       });
 
@@ -89,6 +97,10 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
   const resetForm = () => {
     setBaseUrl("");
     setCampaignName("");
+    setLinkType("website");
+    setWhatsappNumber("5534999999999");
+    setDefaultMessage("");
+    setUseIntermediatePage(false);
     setGeneratedLink("");
   };
 
@@ -122,20 +134,91 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
               {/* Formulário de Geração */}
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="base-url" className="text-white">
-                    🌐 URL do seu site/página:
+                  <Label htmlFor="link-type" className="text-white">
+                    🔗 Tipo de Link:
                   </Label>
-                  <Input
-                    id="base-url"
-                    value={baseUrl}
-                    onChange={(e) => setBaseUrl(e.target.value)}
-                    placeholder="https://meuloja.com.br/produtos"
-                    className="mt-1 bg-gray-800 border-gray-700 text-white"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    URL completa da página que você quer rastrear
-                  </p>
+                  <select
+                    id="link-type"
+                    value={linkType}
+                    onChange={(e) => setLinkType(e.target.value)}
+                    className="mt-1 w-full p-2 bg-gray-800 border border-gray-700 text-white rounded-md"
+                  >
+                    <option value="website">🌐 Site/Página Web</option>
+                    <option value="whatsapp">📱 WhatsApp Direto</option>
+                    <option value="custom">🔧 Link Personalizado</option>
+                  </select>
                 </div>
+
+                {linkType === 'website' || linkType === 'custom' ? (
+                  <div>
+                    <Label htmlFor="base-url" className="text-white">
+                      🌐 URL do destino:
+                    </Label>
+                    <Input
+                      id="base-url"
+                      value={baseUrl}
+                      onChange={(e) => setBaseUrl(e.target.value)}
+                      placeholder="https://meuloja.com.br/produtos"
+                      className="mt-1 bg-gray-800 border-gray-700 text-white"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      URL completa da página que você quer rastrear
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <Label htmlFor="whatsapp-number" className="text-white">
+                      📱 Número do WhatsApp:
+                    </Label>
+                    <Input
+                      id="whatsapp-number"
+                      value={whatsappNumber}
+                      onChange={(e) => setWhatsappNumber(e.target.value)}
+                      placeholder="5534999999999"
+                      className="mt-1 bg-gray-800 border-gray-700 text-white"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">
+                      Número com código do país (ex: 5534999999999)
+                    </p>
+                  </div>
+                )}
+
+                {linkType === 'whatsapp' && (
+                  <>
+                    <div>
+                      <Label htmlFor="default-message" className="text-white">
+                        💬 Mensagem Padrão:
+                      </Label>
+                      <textarea
+                        id="default-message"
+                        value={defaultMessage}
+                        onChange={(e) => setDefaultMessage(e.target.value)}
+                        placeholder="Olá! Vim através do link rastreado."
+                        className="mt-1 w-full p-2 bg-gray-800 border border-gray-700 text-white rounded-md resize-none"
+                        rows={3}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">
+                        Mensagem que aparecerá pré-preenchida no WhatsApp
+                      </p>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="use-intermediate"
+                        checked={useIntermediatePage}
+                        onChange={(e) => setUseIntermediatePage(e.target.checked)}
+                        className="rounded bg-gray-800 border-gray-700"
+                      />
+                      <Label htmlFor="use-intermediate" className="text-white text-sm">
+                        🎯 Usar página intermediária (coleta mais dados)
+                      </Label>
+                    </div>
+                    <p className="text-xs text-gray-400 ml-6">
+                      Mostra uma página antes de abrir o WhatsApp para coletar localização e tempo
+                    </p>
+                  </>
+                )}
 
                 <div>
                   <Label htmlFor="campaign-name" className="text-white">

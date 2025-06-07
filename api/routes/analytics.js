@@ -178,7 +178,7 @@ module.exports = (db) => {
     // Gerar link rastreado para WhatsApp  
     router.post('/integration/generate-link', async (req, res) => {
         try {
-            const { linkType, destinationUrl, whatsappNumber, message, campaignName, userId } = req.body;
+            const { linkType, destinationUrl, whatsappNumber, message, campaignName, userId, useIntermediatePage, defaultMessage } = req.body;
             
             console.log('🔗 [GENERATE LINK] Dados recebidos:', {
                 linkType, destinationUrl, whatsappNumber, message, campaignName
@@ -201,7 +201,11 @@ module.exports = (db) => {
                             error: 'Número do WhatsApp é obrigatório para links WhatsApp'
                         });
                     }
-                    const encodedMessage = encodeURIComponent(message || 'Olá! Vim através do link rastreado.');
+                    // Mensagem pré-preenchida com tracking ID para correlação
+                    const trackingMessage = message ? 
+                        `${message} [ID:${trackingId}]` : 
+                        `Olá! Vim através do link rastreado [ID:${trackingId}]`;
+                    const encodedMessage = encodeURIComponent(trackingMessage);
                     finalDestinationUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodedMessage}`;
                     break;
                     
@@ -228,15 +232,19 @@ module.exports = (db) => {
             // Salvar link rastreado
             await database.sequelize.query(`
                 INSERT INTO whatsapp_tracking_links 
-                (tenant_id, tracking_id, base_url, campaign_name, user_id, created_at)
-                VALUES (?, ?, ?, ?, ?, datetime('now'))
+                (tenant_id, tracking_id, base_url, campaign_name, user_id, link_type, use_intermediate_page, default_message, whatsapp_number, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
             `, {
                 replacements: [
                     req.tenant.id,
                     trackingId,
                     finalDestinationUrl,
                     campaignName || 'default',
-                    userId || null
+                    userId || null,
+                    linkType,
+                    useIntermediatePage || false,
+                    defaultMessage || null,
+                    whatsappNumber || null
                 ]
             });
             
@@ -300,6 +308,132 @@ module.exports = (db) => {
                 error: 'Erro interno do servidor',
                 message: error.message
             });
+        }
+    });
+
+    // Correlacionar mensagem WhatsApp com tracking
+    router.post('/integration/correlate-whatsapp', async (req, res) => {
+        try {
+            const { phoneNumber, message, messageId, conversationId } = req.body;
+            
+            if (!phoneNumber || !message) {
+                return res.status(400).json({
+                    error: 'Número do telefone e mensagem são obrigatórios'
+                });
+            }
+            
+            const database = req.app.locals.db;
+            
+            // Buscar tracking ID na mensagem usando regex
+            const trackingIdMatch = message.match(/\[ID:(wa_\d+_[a-z0-9]+)\]/);
+            
+            if (trackingIdMatch) {
+                const trackingId = trackingIdMatch[1];
+                
+                // Verificar se o tracking ID existe
+                const trackingLink = await database.sequelize.query(`
+                    SELECT * FROM whatsapp_tracking_links 
+                    WHERE tenant_id = ? AND tracking_id = ?
+                `, {
+                    replacements: [req.tenant.id, trackingId],
+                    type: database.sequelize.QueryTypes.SELECT
+                });
+                
+                if (trackingLink.length > 0) {
+                    // Salvar correlação
+                    await database.sequelize.query(`
+                        INSERT INTO whatsapp_message_correlation 
+                        (tenant_id, tracking_id, phone_number, message_id, conversation_id, message_content, correlated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                    `, {
+                        replacements: [
+                            req.tenant.id,
+                            trackingId,
+                            phoneNumber,
+                            messageId || null,
+                            conversationId || null,
+                            message
+                        ]
+                    });
+                    
+                    console.log(`✅ [CORRELATION] Mensagem correlacionada: ${trackingId} ↔ ${phoneNumber}`);
+                    
+                    res.json({
+                        success: true,
+                        message: 'Mensagem correlacionada com sucesso',
+                        trackingId: trackingId,
+                        campaign: trackingLink[0].campaign_name
+                    });
+                } else {
+                    res.json({
+                        success: false,
+                        message: 'Tracking ID não encontrado'
+                    });
+                }
+            } else {
+                res.json({
+                    success: false,
+                    message: 'Nenhum tracking ID encontrado na mensagem'
+                });
+            }
+            
+        } catch (error) {
+            console.error('Erro ao correlacionar mensagem:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+
+    // Registrar dados extras coletados na página intermediária
+    router.post('/integration/track-extra-data', async (req, res) => {
+        try {
+            const { trackingId, tenantId, latitude, longitude, accuracy } = req.body;
+            
+            const database = req.app.locals.db;
+            
+            await database.sequelize.query(`
+                UPDATE whatsapp_click_tracking 
+                SET latitude = ?, longitude = ?, location_accuracy = ?
+                WHERE tenant_id = ? AND tracking_id = ?
+                ORDER BY clicked_at DESC LIMIT 1
+            `, {
+                replacements: [latitude, longitude, accuracy, tenantId, trackingId]
+            });
+            
+            console.log(`📍 [EXTRA DATA] Localização salva para ${trackingId}: ${latitude}, ${longitude}`);
+            
+            res.json({ success: true });
+            
+        } catch (error) {
+            console.error('Erro ao salvar dados extras:', error);
+            res.status(500).json({ error: error.message });
+        }
+    });
+
+    // Registrar abertura do WhatsApp
+    router.post('/integration/track-whatsapp-open', async (req, res) => {
+        try {
+            const { trackingId, tenantId, timeSpent, whatsappUrl } = req.body;
+            
+            const database = req.app.locals.db;
+            
+            await database.sequelize.query(`
+                INSERT INTO whatsapp_opens 
+                (tenant_id, tracking_id, time_spent_before_open, whatsapp_url, opened_at)
+                VALUES (?, ?, ?, ?, datetime('now'))
+            `, {
+                replacements: [tenantId, trackingId, timeSpent, whatsappUrl]
+            });
+            
+            console.log(`📱 [WHATSAPP OPEN] WhatsApp aberto para ${trackingId} após ${timeSpent}s`);
+            
+            res.json({ success: true });
+            
+        } catch (error) {
+            console.error('Erro ao registrar abertura WhatsApp:', error);
+            res.status(500).json({ error: error.message });
         }
     });
 

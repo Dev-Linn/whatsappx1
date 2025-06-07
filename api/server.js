@@ -9,6 +9,274 @@ const { Server } = require('socket.io');
 const fetch = require('node-fetch');
 require('dotenv').config({ path: path.join(__dirname, '../backend/.env') });
 
+// Função para gerar página intermediária
+function generateIntermediatePage({ trackingId, tenantId, whatsappNumber, defaultMessage, campaignName, originalUrl }) {
+    const cleanNumber = whatsappNumber ? whatsappNumber.replace(/\D/g, '') : '5534999999999';
+    const message = defaultMessage || 'Olá! Vim através do link rastreado.';
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${cleanNumber}?text=${encodedMessage}`;
+    
+    return `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectando ao WhatsApp...</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        
+        .container {
+            text-align: center;
+            max-width: 400px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .whatsapp-logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .campaign-info {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+        
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+        }
+        
+        .whatsapp-btn:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.6);
+        }
+        
+        .message-preview {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+            font-size: 14px;
+            border-left: 4px solid #25D366;
+        }
+        
+        .message-preview strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #25D366;
+        }
+        
+        .stats {
+            margin-top: 30px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #25D366;
+            width: 0%;
+            animation: progress 3s ease-in-out forwards;
+        }
+        
+        @keyframes progress {
+            to { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="whatsapp-logo">📱</div>
+        <h1>Conectando ao WhatsApp</h1>
+        
+        <div class="campaign-info">
+            📊 Campanha: <strong>${campaignName}</strong><br>
+            🔗 ID: ${trackingId}
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill"></div>
+        </div>
+        
+        <div class="message-preview">
+            <strong>📝 Mensagem que será enviada:</strong>
+            "${message}"
+        </div>
+        
+        <a href="${whatsappUrl}" class="whatsapp-btn" id="whatsappBtn" onclick="openWhatsApp()">
+            <span class="loading" id="loading" style="display: none;"></span>
+            🚀 Abrir WhatsApp
+        </a>
+        
+        <div class="stats">
+            ⏱️ Tempo na página: <span id="timeCounter">0</span>s<br>
+            🌍 Sua localização será coletada para estatísticas
+        </div>
+    </div>
+    
+    <script>
+        let startTime = Date.now();
+        let timeInterval;
+        
+        // Contador de tempo
+        function updateTimeCounter() {
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            document.getElementById('timeCounter').textContent = elapsed;
+        }
+        
+        timeInterval = setInterval(updateTimeCounter, 1000);
+        
+        // Coletar geolocalização se disponível
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                console.log('📍 Localização coletada:', position.coords.latitude, position.coords.longitude);
+                
+                // Enviar dados para o servidor
+                fetch('/api/v1/analytics/integration/track-extra-data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        trackingId: '${trackingId}',
+                        tenantId: '${tenantId}',
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    })
+                }).catch(console.error);
+            }, function(error) {
+                console.log('❌ Erro ao obter localização:', error.message);
+            });
+        }
+        
+        function openWhatsApp() {
+            const btn = document.getElementById('whatsappBtn');
+            const loading = document.getElementById('loading');
+            
+            // Mostrar loading
+            loading.style.display = 'inline-block';
+            btn.innerHTML = '<span class="loading"></span> Abrindo WhatsApp...';
+            
+            // Registrar abertura do WhatsApp
+            const timeSpent = Math.floor((Date.now() - startTime) / 1000);
+            
+            fetch('/api/v1/analytics/integration/track-whatsapp-open', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    trackingId: '${trackingId}',
+                    tenantId: '${tenantId}',
+                    timeSpent: timeSpent,
+                    whatsappUrl: '${whatsappUrl}'
+                })
+            }).catch(console.error);
+            
+            clearInterval(timeInterval);
+            
+            // Pequeno delay para mostrar o loading
+            setTimeout(() => {
+                window.open('${whatsappUrl}', '_blank');
+                
+                // Voltar ao estado normal após 2 segundos
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    btn.innerHTML = '✅ WhatsApp Aberto!';
+                    btn.style.background = '#128C7E';
+                }, 2000);
+            }, 500);
+        }
+        
+        // Auto-abrir após 5 segundos se não clicar
+        setTimeout(() => {
+            if (document.getElementById('whatsappBtn').innerHTML.includes('Abrir WhatsApp')) {
+                openWhatsApp();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
+    `.trim();
+}
+
 // Importar database e middleware
 const ApiDatabase = require('./database');
 const {
@@ -362,7 +630,7 @@ async function startServer() {
         // Rotas de monitoramento (públicas para health check)
         app.use('/api/v1/monitoring', monitoringRoutes);
         
-        // ROTA PÚBLICA PARA TRACKING DE CLIQUES (SEM AUTENTICAÇÃO) - DEVE VIR ANTES DAS AUTENTICADAS
+        // ROTA PÚBLICA PARA TRACKING DE CLIQUES (SEM AUTENTICAÇÃO) - PODE SER PÁGINA INTERMEDIÁRIA
         app.get('/track/:trackingId', async (req, res) => {
             try {
                 console.log('🔍 [PUBLIC TRACK] Clique capturado:', req.params.trackingId);
@@ -378,7 +646,16 @@ async function startServer() {
                     return res.redirect(originalUrl || 'https://wa.me/5534999999999');
                 }
                 
-                // Registrar clique
+                // Buscar dados do link para ver se deve usar página intermediária
+                const linkData = await db.sequelize.query(`
+                    SELECT * FROM whatsapp_tracking_links 
+                    WHERE tenant_id = ? AND tracking_id = ?
+                `, {
+                    replacements: [tenantId, trackingId],
+                    type: db.sequelize.QueryTypes.SELECT
+                });
+                
+                // Registrar clique inicial
                 await db.sequelize.query(`
                     INSERT INTO whatsapp_click_tracking 
                     (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
@@ -393,13 +670,32 @@ async function startServer() {
                     ]
                 });
                 
-                console.log('✅ [PUBLIC TRACK] Clique registrado com sucesso - redirecionando para:', originalUrl);
+                console.log('✅ [PUBLIC TRACK] Clique registrado com sucesso');
                 
-                // Redirecionar para a URL original
-                res.redirect(originalUrl);
+                // Se deve usar página intermediária E é link WhatsApp
+                if (linkData.length > 0 && linkData[0].use_intermediate_page && linkData[0].link_type === 'whatsapp') {
+                    console.log('🔄 [PUBLIC TRACK] Usando página intermediária');
+                    
+                    // Servir página intermediária HTML
+                    const intermediatePageHTML = generateIntermediatePage({
+                        trackingId,
+                        tenantId,
+                        whatsappNumber: linkData[0].whatsapp_number,
+                        defaultMessage: linkData[0].default_message,
+                        campaignName: linkData[0].campaign_name,
+                        originalUrl: linkData[0].base_url
+                    });
+                    
+                    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+                    res.send(intermediatePageHTML);
+                } else {
+                    // Redirecionamento direto (comportamento anterior)
+                    console.log('↗️ [PUBLIC TRACK] Redirecionamento direto para:', originalUrl);
+                    res.redirect(originalUrl);
+                }
                 
             } catch (error) {
-                console.error('❌ [PUBLIC TRACK] Erro ao registrar clique:', error);
+                console.error('❌ [PUBLIC TRACK] Erro ao processar tracking:', error);
                 res.redirect(req.query.url || 'https://wa.me/5534999999999');
             }
         });
