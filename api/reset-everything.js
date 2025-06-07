@@ -10,19 +10,23 @@ async function resetEverything() {
     await db.initialize();
     
     try {
-        // Verificar TODAS as tabelas no início
-        console.log('📊 DADOS ATUAIS EM TODAS AS TABELAS:');
+        // DESCOBRIR TODAS AS TABELAS QUE REALMENTE EXISTEM
+        console.log('🔍 DESCOBRINDO TODAS AS TABELAS NO BANCO...');
         
-        const allTablesCheck = [
-            'tenants', 'users', 'conversations', 'messages', 'api_costs', 'tenant_prompts',
-            'whatsapp_tracking_links', 'whatsapp_click_tracking', 'whatsapp_message_correlation',
-            'google_analytics_tokens', 'google_analytics_selections', 'system_logs', 'uptime_records'
-        ];
+        const existingTables = await db.sequelize.query(`
+            SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        `, {
+            type: db.sequelize.QueryTypes.SELECT
+        });
         
+        const allRealTables = existingTables.map(t => t.name);
+        console.log(`📋 TABELAS ENCONTRADAS: ${allRealTables.join(', ')}`);
+        
+        console.log('\n📊 CONTANDO REGISTROS EM CADA TABELA:');
         const currentCounts = {};
         let totalRecords = 0;
         
-        for (const table of allTablesCheck) {
+        for (const table of allRealTables) {
             try {
                 const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM ${table}`);
                 const count = result[0]?.count || 0;
@@ -30,7 +34,7 @@ async function resetEverything() {
                 totalRecords += count;
                 console.log(`📋 ${table}: ${count}`);
             } catch (error) {
-                console.log(`⚠️ ${table}: Tabela não existe`);
+                console.log(`❌ ${table}: Erro - ${error.message}`);
                 currentCounts[table] = 0;
             }
         }
@@ -48,42 +52,15 @@ async function resetEverything() {
         await db.sequelize.query('PRAGMA foreign_keys = OFF');
         console.log('  🔓 Foreign keys desabilitadas');
         
-        // Usar SQL direto para garantir que limpe TODAS as tabelas
-        const allTables = [
-            // Core do sistema
-            'api_costs',
-            'messages', 
-            'conversations',
-            'tenant_prompts',
-            'users',
-            'tenants',
-            
-            // Analytics e tracking
-            'whatsapp_tracking_links',
-            'whatsapp_click_tracking', 
-            'whatsapp_message_correlation',
-            'google_analytics_tokens',
-            'google_analytics_selections',
-            
-            // Sistema de logs
-            'system_logs',
-            'uptime_records',
-            
-            // Outros possíveis
-            'tenant_settings',
-            'webhook_logs',
-            'api_usage',
-            'session_data'
-        ];
+        // APAGAR TODAS AS TABELAS QUE REALMENTE EXISTEM
+        console.log(`\n🔥 LIMPANDO TODAS AS ${allRealTables.length} TABELAS ENCONTRADAS...`);
         
-        console.log(`📋 Tentando limpar ${allTables.length} tabelas possíveis...`);
-        
-        for (const table of allTables) {
+        for (const table of allRealTables) {
             try {
                 await db.sequelize.query(`DELETE FROM ${table}`);
-                console.log(`  ✅ ${table} - SQL direto`);
+                console.log(`  ✅ ${table} - APAGADO`);
             } catch (error) {
-                console.log(`  ⚠️ ${table} - Tabela não existe ou erro: ${error.message}`);
+                console.log(`  ❌ ${table} - ERRO: ${error.message}`);
             }
         }
         
@@ -101,13 +78,13 @@ async function resetEverything() {
         await db.sequelize.query('PRAGMA foreign_keys = ON');
         console.log('  🔒 Foreign keys reabilitadas');
         
-        // Verificar resultado de TODAS as tabelas
-        console.log('\n📊 DADOS APÓS LIMPEZA EM TODAS AS TABELAS:');
+        // Verificar resultado de TODAS as tabelas reais
+        console.log('\n📊 CONTANDO REGISTROS APÓS LIMPEZA:');
         
         const finalCounts = {};
         let finalTotalRecords = 0;
         
-        for (const table of allTablesCheck) {
+        for (const table of allRealTables) {
             try {
                 const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM ${table}`);
                 const count = result[0]?.count || 0;
@@ -115,7 +92,7 @@ async function resetEverything() {
                 finalTotalRecords += count;
                 console.log(`📋 ${table}: ${count}`);
             } catch (error) {
-                console.log(`⚠️ ${table}: Erro - ${error.message}`);
+                console.log(`❌ ${table}: Erro - ${error.message}`);
                 finalCounts[table] = 'ERRO';
             }
         }
@@ -141,9 +118,15 @@ async function resetEverything() {
         if (finalTotalRecords === 0) {
             console.log('\n🎉 BANCO COMPLETAMENTE LIMPO E AUTO_INCREMENT RESETADO!');
             console.log('📝 Próximo tenant criado terá ID = 1');
-            console.log('🔥 Todas as ' + allTablesCheck.length + ' tabelas foram limpas com sucesso!');
+            console.log('🔥 Todas as ' + allRealTables.length + ' tabelas foram limpas com sucesso!');
         } else {
-            console.log('\n⚠️ Alguns dados não foram removidos (' + finalTotalRecords + ' registros restantes)');
+            console.log('\n⚠️ MERDA! Ainda tem dados: ' + finalTotalRecords + ' registros restantes');
+            console.log('💀 Tabelas que não foram limpas:');
+            for (const table of allRealTables) {
+                if (finalCounts[table] > 0) {
+                    console.log(`   💥 ${table}: ${finalCounts[table]} registros`);
+                }
+            }
         }
         
     } catch (error) {
