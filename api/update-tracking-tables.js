@@ -32,8 +32,8 @@ async function updateTrackingTables() {
                     console.error(`❌ [UPDATE TABLES] Erro ao adicionar coluna: ${error.message}`);
                 }
             }
-        }
-        
+        }  
+         
         // 2. Adicionar colunas na tabela whatsapp_click_tracking
         console.log('📝 [UPDATE TABLES] Adicionando colunas em whatsapp_click_tracking...');
         
