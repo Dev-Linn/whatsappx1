@@ -93,7 +93,7 @@ createTables.forEach((sql, index) => {
                 db.all("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'whatsapp_%'", (err, rows) => {
                     if (!err) {
                         console.log('\n📋 Tabelas criadas:');
-                        rows.forEach(row => console.log(`   ✅ ${row.name}`));
+                        // DEBUG: rows.forEach(row => console.log(`   ✅ ${row.name}`));
                     }
                     
                     db.close((err) => {

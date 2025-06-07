@@ -36,7 +36,7 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const totalSteps = 5;
+  const totalSteps = 3;
   const progress = (currentStep / totalSteps) * 100;
 
   const copyToClipboard = (text: string) => {
@@ -108,72 +108,108 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
       case 1:
         return (
           <div className="text-center space-y-6">
-            <div className="flex justify-center items-center space-x-4 text-4xl">
-              <MessageSquare className="text-green-500" />
-              <div className="text-2xl">──🔗──</div>
-              <Globe className="text-blue-500" />
-              <div className="text-2xl">──💰</div>
-              <TrendingUp className="text-yellow-500" />
+            <div className="flex justify-center items-center space-x-3 text-3xl mb-4">
+              <div className="bg-blue-600 rounded-lg p-2">📘</div>
+              <div className="text-xl">→</div>
+              <div className="bg-pink-600 rounded-lg p-2">📷</div>
+              <div className="text-xl">→</div>
+              <div className="bg-red-600 rounded-lg p-2">📧</div>
+              <div className="text-xl">→</div>
+              <div className="bg-purple-600 rounded-lg p-2">🌐</div>
+              <div className="text-xl">→</div>
+              <div className="bg-green-600 rounded-lg p-2">💬</div>
+              <div className="text-xl">→</div>
+              <div className="bg-yellow-600 rounded-lg p-2">💰</div>
             </div>
             
             <div>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                🚀 SUPER INTEGRAÇÃO WhatsApp + Analytics
+              <h3 className="text-2xl font-bold text-white mb-3">
+                🚀 VEJA AS POSSIBILIDADES COM GOOGLE ANALYTICS
               </h3>
-              <p className="text-gray-400 max-w-md mx-auto">
-                Conecte seus usuários do WhatsApp com visitantes do seu site para ter o ROI real das suas conversas!
+              <p className="text-gray-300 max-w-2xl mx-auto text-lg">
+                Conecte seu <strong>Google Analytics</strong> e desbloqueie funcionalidades incríveis de tracking WhatsApp
+              </p>
+              <p className="text-green-400 max-w-xl mx-auto mt-2">
+                ✨ Correlação automática entre conversas e visitantes do site
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <Card className="bg-gray-800 border-gray-700">
                 <CardContent className="p-4 text-center">
-                  <CheckCircle className="h-8 w-8 text-green-500 mx-auto mb-2" />
-                  <p className="text-white font-medium">Rastrear Visitas</p>
-                  <p className="text-gray-400 text-xs">Quem visitou seu site</p>
+                  <div className="text-2xl mb-2">📘</div>
+                  <p className="text-white font-medium">Facebook Ads</p>
+                  <p className="text-gray-400 text-xs">Tracking completo</p>
                 </CardContent>
               </Card>
               
               <Card className="bg-gray-800 border-gray-700">
                 <CardContent className="p-4 text-center">
-                  <CheckCircle className="h-8 w-8 text-blue-500 mx-auto mb-2" />
-                  <p className="text-white font-medium">Ver Comportamento</p>
-                  <p className="text-gray-400 text-xs">Após conversa no WA</p>
+                  <div className="text-2xl mb-2">📷</div>
+                  <p className="text-white font-medium">Instagram</p>
+                  <p className="text-gray-400 text-xs">Stories & Posts</p>
                 </CardContent>
               </Card>
               
               <Card className="bg-gray-800 border-gray-700">
                 <CardContent className="p-4 text-center">
-                  <CheckCircle className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-                  <p className="text-white font-medium">ROI Real</p>
-                  <p className="text-gray-400 text-xs">Calcular retorno exato</p>
+                  <div className="text-2xl mb-2">📧</div>
+                  <p className="text-white font-medium">E-mail Mkt</p>
+                  <p className="text-gray-400 text-xs">Campanhas & Auto</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-2">💬</div>
+                  <p className="text-white font-medium">WhatsApp</p>
+                  <p className="text-gray-400 text-xs">Conversas & Bot</p>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Métricas Reais de Exemplo */}
-            <div className="mt-6 p-4 bg-green-900/20 border border-green-600 rounded-lg">
-              <h4 className="text-green-400 font-medium mb-3 flex items-center">
-                <TrendingUp className="h-4 w-4 mr-2" />
-                📊 Exemplo de Resultados Reais:
+            {/* Métricas Enterprise de Exemplo */}
+            <div className="mt-6 p-6 bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-600 rounded-lg">
+              <h4 className="text-purple-400 font-bold mb-4 flex items-center text-lg">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                🏢 RESULTADOS ENTERPRISE REAIS:
               </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div className="text-center">
-                  <div className="text-white font-bold text-lg">847</div>
-                  <div className="text-gray-400 text-xs">Cliques WA→Site</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-white font-bold text-lg">23%</div>
-                  <div className="text-gray-400 text-xs">Taxa Conversão</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-white font-bold text-lg">R$ 12.340</div>
-                  <div className="text-gray-400 text-xs">Receita Rastreada</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-white font-bold text-lg">4.2x</div>
-                  <div className="text-gray-400 text-xs">ROI Médio</div>
-                </div>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-3 text-center">
+                    <div className="text-white font-bold text-xl">2.847</div>
+                    <div className="text-gray-400 text-xs">Campanhas Ativas</div>
+                    <div className="text-gray-300 text-xs">Multi-canal</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-3 text-center">
+                    <div className="text-white font-bold text-xl">74.3%</div>
+                    <div className="text-gray-400 text-xs">Taxa Tracking</div>
+                    <div className="text-gray-300 text-xs">Todas as fontes</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-3 text-center">
+                    <div className="text-white font-bold text-xl">R$ 89.4k</div>
+                    <div className="text-gray-400 text-xs">Receita Mensal</div>
+                    <div className="text-gray-300 text-xs">Rastreada 100%</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-3 text-center">
+                    <div className="text-white font-bold text-xl">6.8x</div>
+                    <div className="text-gray-400 text-xs">ROI Médio</div>
+                    <div className="text-gray-300 text-xs">Todos os canais</div>
+                  </CardContent>
+                </Card>
+                <Card className="bg-gray-800 border-gray-700">
+                  <CardContent className="p-3 text-center">
+                    <div className="text-white font-bold text-xl">1.234</div>
+                    <div className="text-gray-400 text-xs">Leads/mês</div>
+                    <div className="text-gray-300 text-xs">Qualificados</div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
@@ -184,40 +220,40 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-xl font-semibold text-white mb-2">
-                🧠 COMO A MÁGICA ACONTECE
+                🔗 COMO A INTEGRAÇÃO FUNCIONARÁ
               </h3>
-              <p className="text-gray-400">Veja o fluxo completo de integração</p>
+              <p className="text-gray-400">Veja como o WhatsApp + Google Analytics trabalharão juntos</p>
             </div>
 
             <div className="space-y-4">
               {[
                 {
                   step: "1️⃣",
-                  title: "Cliente conversa no WhatsApp",
-                  description: '"Oi, quero ver os preços dos produtos"',
-                  icon: <MessageSquare className="h-5 w-5 text-green-500" />,
-                  metrics: "847 conversas/mês"
+                  title: "Cliente vê sua campanha em QUALQUER lugar",
+                  description: 'Facebook: "Promoção 50% OFF" | Instagram: Story com link | E-mail: Newsletter',
+                  icon: <Globe className="h-5 w-5 text-blue-500" />,
+                  metrics: "Todas as fontes rastreadas"
                 },
                 {
                   step: "2️⃣",
-                  title: "Bot envia link rastreado",
-                  description: '"Catálogo: loja.com.br?utm_source=whatsapp&wa=5511987654321"',
-                  icon: <ExternalLink className="h-5 w-5 text-blue-500" />,
-                  metrics: "634 cliques únicos"
+                  title: "Sistema gera link único para CADA origem",
+                  description: 'FB: "loja.com?utm_source=facebook&campaign=promo50" | IG: "loja.com?utm_source=instagram&story=123"',
+                  icon: <ExternalLink className="h-5 w-5 text-purple-500" />,
+                  metrics: "Tracking ID único por canal"
                 },
                 {
                   step: "3️⃣",
-                  title: "Google Analytics registra origem",
-                  description: 'Sessão: "WhatsApp → João Silva → Produto X"',
-                  icon: <TrendingUp className="h-5 w-5 text-purple-500" />,
-                  metrics: "23% taxa conversão"
+                  title: "Google Analytics + Sistema correlacionam TUDO",
+                  description: 'GA4: "Facebook → João Silva → 4min no site → WhatsApp → Comprou R$ 299"',
+                  icon: <TrendingUp className="h-5 w-5 text-green-500" />,
+                  metrics: "Journey completo mapeado"
                 },
                 {
                   step: "4️⃣",
-                  title: "Dashboard unifica dados",
-                  description: 'ROI: "João: R$ 250 gasto → R$ 1.200 faturado"',
+                  title: "Dashboard ENTERPRISE mostra ROI de CADA canal",
+                  description: 'Facebook: R$ 500 gasto → R$ 3.400 vendido | Instagram: R$ 200 → R$ 1.800 | E-mail: R$ 50 → R$ 800',
                   icon: <Settings className="h-5 w-5 text-yellow-500" />,
-                  metrics: "ROI médio: 4.2x"
+                  metrics: "ROI por canal + total"
                 }
               ].map((item, index) => (
                 <Card key={index} className="bg-gray-800 border-gray-700">
@@ -249,67 +285,51 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
           <div className="space-y-6">
             <div className="text-center">
               <h3 className="text-xl font-semibold text-white mb-2">
-                ⚙️ CONFIGURAR INTEGRAÇÃO
+                🎯 O QUE VOCÊ PODERÁ FAZER
               </h3>
-              <p className="text-gray-400">Configure os dados básicos</p>
+              <p className="text-gray-400">Funcionalidades que serão liberadas após conectar o Analytics</p>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="site-url" className="text-white">
-                  🌐 URL do seu site/loja:
-                </Label>
-                <Input
-                  id="site-url"
-                  value={siteUrl}
-                  onChange={(e) => setSiteUrl(e.target.value)}
-                  placeholder="https://meuloja.com.br"
-                  className="mt-1 bg-gray-800 border-gray-700 text-white"
-                />
-              </div>
-
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="bg-gray-800 border-gray-700">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-white font-medium">📊 Google Analytics</h4>
-                      <p className="text-gray-400 text-sm">Status da conexão</p>
-                    </div>
-                    <Badge className="bg-green-600">
-                      ✅ Conectado
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    GA4 Property: 123456789
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-4">🔗</div>
+                  <h4 className="text-white font-bold mb-2">Links Rastreados</h4>
+                  <p className="text-gray-300 text-sm">
+                    Gere links únicos para WhatsApp que se correlacionam automaticamente com visitas do Google Analytics
                   </p>
                 </CardContent>
               </Card>
 
-              <div>
-                <Label className="text-white mb-3 block">
-                  🎯 Tipo de conversão a rastrear:
-                </Label>
-                <div className="space-y-2">
-                  {[
-                    { id: "visits", label: "Visitas ao site", checked: true },
-                    { id: "time", label: "Tempo de permanência > 2min", checked: true },
-                    { id: "products", label: "Visualizações de produto", checked: true },
-                    { id: "purchases", label: "Compras/Conversões", checked: false }
-                  ].map((item) => (
-                    <div key={item.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={item.id}
-                        defaultChecked={item.checked}
-                        className="rounded border-gray-600 bg-gray-800"
-                      />
-                      <label htmlFor={item.id} className="text-sm text-gray-300">
-                        {item.label}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-4">📊</div>
+                  <h4 className="text-white font-bold mb-2">Dashboard Unificado</h4>
+                  <p className="text-gray-300 text-sm">
+                    Veja dados do WhatsApp + Google Analytics em um só lugar com métricas de conversão
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-4">🎯</div>
+                  <h4 className="text-white font-bold mb-2">ROI Real</h4>
+                  <p className="text-gray-300 text-sm">
+                    Calcule o retorno exato: da conversa no WhatsApp até a compra no site
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-6 text-center">
+                  <div className="text-4xl mb-4">🚀</div>
+                  <h4 className="text-white font-bold mb-2">Automação Total</h4>
+                  <p className="text-gray-300 text-sm">
+                    Correlação automática entre mensagens do WhatsApp e sessões do Google Analytics
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         );
@@ -317,141 +337,64 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
       case 4:
         return (
           <div className="space-y-6">
-            <div className="text-center">
+                        <div className="text-center mb-6">
               <h3 className="text-xl font-semibold text-white mb-2">
-                🔧 ESCOLHER MÉTODO DE TRACKING
+                📈 EXEMPLO DE RESULTADO
               </h3>
-              <p className="text-gray-400">Selecione como quer rastrear os usuários</p>
+              <p className="text-gray-400">Veja como seus dados aparecerão após a integração</p>
             </div>
 
-            <div className="space-y-4">
-              {/* OPÇÃO A: Automático */}
-              <Card 
-                className={`cursor-pointer transition-all ${
-                  trackingOption === "automatic" 
-                    ? "bg-green-900/20 border-green-600" 
-                    : "bg-gray-800 border-gray-700 hover:border-gray-600"
-                }`}
-                onClick={() => setTrackingOption("automatic")}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Zap className="h-5 w-5 text-green-500" />
-                      <CardTitle className="text-white">🎯 OPÇÃO A: Automático</CardTitle>
-                    </div>
-                    <Badge className="bg-green-600">Recomendado</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <p className="text-gray-300 text-sm">
-                      Seus links do WhatsApp ficarão assim:
-                    </p>
-                    <div className="bg-gray-900 p-3 rounded border font-mono text-sm text-green-400">
-                      meuloja.com?utm_source=whatsapp&wa=123
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center space-x-2 text-green-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Funciona automaticamente</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-green-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Sem código adicional</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-green-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Setup em 2 minutos</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-green-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Zero conhecimento técnico</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-yellow-900/20 border border-yellow-600 p-3 rounded">
-                      <p className="text-yellow-300 text-sm">
-                        ⚠️ <strong>Limitação:</strong> Só funciona quando o bot envia links
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* OPÇÃO B: Manual */}
-              <Card 
-                className={`cursor-pointer transition-all ${
-                  trackingOption === "manual" 
-                    ? "bg-blue-900/20 border-blue-600" 
-                    : "bg-gray-800 border-gray-700 hover:border-gray-600"
-                }`}
-                onClick={() => setTrackingOption("manual")}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex items-center space-x-2">
-                    <Code className="h-5 w-5 text-blue-500" />
-                    <CardTitle className="text-white">🛠️ OPÇÃO B: Pixel Manual</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <p className="text-gray-300 text-sm">
-                      Cole este código no seu site:
-                    </p>
-                    <div className="bg-gray-900 p-3 rounded border relative">
-                      <code className="text-blue-400 text-sm">
-                        &lt;script src="tracking.js"&gt;&lt;/script&gt;
-                      </code>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="absolute top-2 right-2 h-6 px-2"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          copyToClipboard('<script src="tracking.js"></script>');
-                        }}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div className="flex items-center space-x-2 text-blue-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Tracking completo</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-blue-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Funciona sempre</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-blue-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Dados mais ricos</span>
-                      </div>
-                      <div className="flex items-center space-x-2 text-blue-400">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>Eventos customizados</span>
-                      </div>
-                    </div>
-
-                    <div className="bg-orange-900/20 border border-orange-600 p-3 rounded">
-                      <p className="text-orange-300 text-sm">
-                        ⚠️ <strong>Requer:</strong> Conhecimento técnico para instalar
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+            <div className="bg-gray-900 p-4 rounded border border-gray-700 font-mono text-sm">
+              <div className="mb-3 text-green-400">🎯 Dashboard Integrado - Exemplo Real:</div>
+              <div className="space-y-2 text-gray-300">
+                <div className="border-l-2 border-blue-500 pl-3">
+                  <div className="text-blue-400">📱 WhatsApp: João Silva (+55 11 99999-9999)</div>
+                  <div className="text-xs text-gray-500">├─ Conversa: "Quero ver os produtos" (14:32)</div>
+                </div>
+                
+                <div className="border-l-2 border-green-500 pl-3">
+                  <div className="text-green-400">🔗 Link Enviado: loja.com.br/produtos?utm_source=whatsapp</div>
+                  <div className="text-xs text-gray-500">├─ Clique registrado (14:35)</div>
+                </div>
+                
+                <div className="border-l-2 border-purple-500 pl-3">
+                  <div className="text-purple-400">📊 Google Analytics: Sessão iniciada</div>
+                  <div className="text-xs text-gray-500">├─ Origem: WhatsApp | Duração: 4min 23s</div>
+                  <div className="text-xs text-gray-500">├─ Páginas: 3 | Produtos visualizados: 2</div>
+                </div>
+                
+                <div className="border-l-2 border-yellow-500 pl-3">
+                  <div className="text-yellow-400">💰 Conversão: R$ 149,90</div>
+                  <div className="text-xs text-gray-500">└─ ROI: WhatsApp → R$ 149,90 em 8 minutos</div>
+                </div>
+              </div>
             </div>
 
-            <div className="bg-gray-900 p-4 rounded border border-gray-700">
-              <h4 className="text-white font-medium mb-2">💡 Nossa Recomendação:</h4>
-              <p className="text-gray-400 text-sm">
-                Comece com <strong className="text-green-400">OPÇÃO A</strong> para ver resultados imediatos. 
-                Depois de 1 semana, se quiser dados mais detalhados, migre para <strong className="text-blue-400">OPÇÃO B</strong>.
-              </p>
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-3">
+                  <div className="text-lg font-bold text-white">1 min</div>
+                  <div className="text-xs text-gray-400">Tempo para clique</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-3">
+                  <div className="text-lg font-bold text-white">4m 23s</div>
+                  <div className="text-xs text-gray-400">Tempo no site</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-3">
+                  <div className="text-lg font-bold text-white">100%</div>
+                  <div className="text-xs text-gray-400">Correlação</div>
+                </CardContent>
+              </Card>
+              <Card className="bg-gray-800 border-gray-700">
+                <CardContent className="p-3">
+                  <div className="text-lg font-bold text-white">R$ 149</div>
+                  <div className="text-xs text-gray-400">Conversão</div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         );
@@ -460,11 +403,11 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
         return (
           <div className="space-y-6">
             <div className="text-center">
-              <Rocket className="h-16 w-16 mx-auto mb-4 text-green-500" />
-              <h3 className="text-xl font-semibold text-white mb-2">
-                🎉 INTEGRAÇÃO CONFIGURADA!
+              <Rocket className="h-16 w-16 mx-auto mb-4 text-purple-500" />
+              <h3 className="text-2xl font-bold text-white mb-2">
+                🏢 PLATAFORMA ENTERPRISE ATIVADA!
               </h3>
-              <p className="text-gray-400">Tudo pronto para começar</p>
+              <p className="text-purple-200">Sua central de marketing analytics está online</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
@@ -503,61 +446,63 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <p className="text-gray-300 text-sm">Link de teste gerado:</p>
-                <div className="bg-gray-900 p-3 rounded border relative">
-                  <code className="text-green-400 text-sm">
-                    {siteUrl || "meuloja.com.br"}?wa=test123&utm_source=whatsapp
-                  </code>
+                <p className="text-gray-300 text-sm">Links de teste multi-canal gerados:</p>
+                <div className="bg-gray-900 p-3 rounded border relative space-y-1 font-mono text-xs">
+                  <div className="text-blue-400">📘 {siteUrl || "empresa.com"}?utm_source=facebook&campaign=test</div>
+                  <div className="text-pink-400">📷 {siteUrl || "empresa.com"}?utm_source=instagram&story=test</div>
+                  <div className="text-green-400">💬 {siteUrl || "empresa.com"}?utm_source=whatsapp&wa=test123</div>
+                  <div className="text-red-400">📧 {siteUrl || "empresa.com"}?utm_source=email&campaign=test</div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className="absolute top-2 right-2 h-6 px-2"
-                    onClick={() => copyToClipboard(`${siteUrl || "meuloja.com.br"}?wa=test123&utm_source=whatsapp`)}
+                    className="absolute top-2 right-2 h-6 px-2 border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+                    onClick={() => copyToClipboard(`${siteUrl || "empresa.com"}?utm_source=whatsapp&wa=test123`)}
                   >
                     <Copy className="h-3 w-3" />
                   </Button>
                 </div>
                 
                 <div className="text-sm text-gray-400 space-y-1">
-                  <p>1. Abra este link</p>
-                  <p>2. Volte aqui em 30 segundos</p>
-                  <p>3. Veja os dados chegando! 📊</p>
+                  <p>1. Teste qualquer um dos links acima</p>
+                  <p>2. Volte aqui em 1 minuto</p>
+                  <p>3. Veja a correlação automática funcionando! 📊</p>
+                  <p className="text-purple-400 font-medium">🚀 Todos os canais já estão sendo rastreados!</p>
                 </div>
               </CardContent>
             </Card>
 
             <div className="bg-gray-900 p-4 rounded border border-gray-700">
-              <h4 className="text-white font-medium mb-3 flex items-center">
+              <h4 className="text-purple-400 font-bold mb-3 flex items-center">
                 <TrendingUp className="h-4 w-4 mr-2" />
-                📈 Métricas que você vai monitorar:
+                🏢 Métricas Enterprise que você vai monitorar:
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">• Conversas WA → Cliques site:</span>
-                    <span className="text-green-400 font-medium">74.9%</span>
+                    <span className="text-gray-400">• ROI por canal (FB/IG/Email/WA):</span>
+                    <span className="text-purple-400 font-medium">Individual</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">• Páginas mais visitadas:</span>
-                    <span className="text-blue-400 font-medium">Top 5</span>
+                    <span className="text-gray-400">• Journey completo do usuário:</span>
+                    <span className="text-blue-400 font-medium">100% mapeado</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">• Tempo médio no site:</span>
-                    <span className="text-yellow-400 font-medium">4m 23s</span>
+                    <span className="text-gray-400">• Correlação automática:</span>
+                    <span className="text-green-400 font-medium">Tempo real</span>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-400">• Taxa de conversão:</span>
-                    <span className="text-green-400 font-medium">23.1%</span>
+                    <span className="text-gray-400">• Performance por campanha:</span>
+                    <span className="text-yellow-400 font-medium">Detalhada</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">• ROI médio por lead:</span>
-                    <span className="text-green-400 font-medium">4.2x</span>
+                    <span className="text-gray-400">• Conversão multi-canal:</span>
+                    <span className="text-green-400 font-medium">Unificada</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">• Receita rastreada:</span>
-                    <span className="text-green-400 font-medium">R$ 12.3k/mês</span>
+                    <span className="text-gray-400">• Dashboard centralizado:</span>
+                    <span className="text-purple-400 font-medium">Tempo real</span>
                   </div>
                 </div>
               </div>
@@ -620,9 +565,9 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
               <Button
                 variant="ghost"
                 onClick={onClose}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white hover:bg-gray-800"
               >
-                Pular Tutorial
+                Pular Demo
               </Button>
             )}
           </div>
@@ -632,7 +577,7 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
               <Button
                 variant="outline"
                 onClick={handlePrevious}
-                className="border-gray-600 text-gray-300 hover:bg-gray-700"
+                className="border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Anterior
@@ -642,7 +587,7 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
             {currentStep < totalSteps ? (
               <Button
                 onClick={handleNext}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white"
                 disabled={currentStep === 3 && !siteUrl.trim()}
               >
                 Próximo
@@ -652,16 +597,16 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
               <Button
                 onClick={handleFinish}
                 disabled={isLoading}
-                className="bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white"
               >
                 {isLoading ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Configurando...
+                    Vamos ver as possibilidades...
                   </>
                 ) : (
                   <>
-                    Finalizar Setup!
+                    Ver Demonstração!
                     <Rocket className="h-4 w-4 ml-2" />
                   </>
                 )}
