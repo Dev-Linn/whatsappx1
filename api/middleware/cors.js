@@ -114,9 +114,26 @@ const responseHelper = (req, res, next) => {
     next();
 };
 
+// Configuração do Helmet com CSP customizado
+const helmetConfig = helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"], // Permitir scripts inline
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'"],
+            fontSrc: ["'self'"],
+            objectSrc: ["'none'"],
+            mediaSrc: ["'self'"],
+            frameSrc: ["'none'"],
+        },
+    },
+});
+
 module.exports = {
     cors: cors(corsOptions),
-    helmet: helmet(),
+    helmet: helmetConfig,
     compression: compression(),
     limiter,
     strictLimiter,
