@@ -43,7 +43,7 @@ async function addCorrelationColumns() {
         });
         
         console.log('✅ [UPDATE] Tabela atualizada com sucesso!');
-        process.exit(0);
+        process.exit(0); 
         
     } catch (error) {
         console.error('❌ [UPDATE] Erro ao atualizar tabela:', error);
