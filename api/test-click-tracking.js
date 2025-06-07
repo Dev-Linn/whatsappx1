@@ -6,6 +6,12 @@ async function testClickTracking() {
     console.log('🔍 [CLICK TRACKING] Verificando cliques rastreados...');
     
     try {
+        // Inicializar banco se necessário
+        if (!database.sequelize) {
+            console.log('🔄 Inicializando conexão com banco...');
+            await database.initializeDatabase();
+        }
+        
         // Verificar links criados
         const links = await database.sequelize.query(`
             SELECT * FROM whatsapp_tracking_links 
