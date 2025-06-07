@@ -36,7 +36,7 @@ async function updateTrackingTables() {
          
         // 2. Adicionar colunas na tabela whatsapp_click_tracking
         console.log('📝 [UPDATE TABLES] Adicionando colunas em whatsapp_click_tracking...');
-        
+         
         const newColumnsClicks = [
             'ALTER TABLE whatsapp_click_tracking ADD COLUMN latitude REAL',
             'ALTER TABLE whatsapp_click_tracking ADD COLUMN longitude REAL',
