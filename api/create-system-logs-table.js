@@ -1,8 +1,8 @@
-const Database = require('../backend/src/database/Database');
+    const ApiDatabase = require('./database');
 
 async function createSystemLogsTable() {
     try {
-        const db = new Database();
+        const db = new ApiDatabase();
         
         await db.sequelize.query(`
             CREATE TABLE IF NOT EXISTS system_logs (
