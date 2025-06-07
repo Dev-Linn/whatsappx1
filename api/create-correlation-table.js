@@ -19,6 +19,8 @@ async function createCorrelationTable() {
                 message_id TEXT,
                 conversation_id TEXT,
                 message_content TEXT NOT NULL,
+                correlation_method TEXT DEFAULT 'manual',
+                time_elapsed_seconds INTEGER,
                 lead_score INTEGER DEFAULT 0,
                 conversion_stage TEXT DEFAULT 'initial_contact',
                 follow_up_count INTEGER DEFAULT 0,

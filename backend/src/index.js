@@ -562,12 +562,21 @@ class WhatsAppInstance {
             }
             
             // 🔍 CORRELAÇÃO AUTOMÁTICA DE TRACKING
-            // Verificar se a mensagem contém um tracking ID para correlação
+            // 1. Correlação por ID (caso ainda tenha)
             if (!isAudioMessage && messageContent && messageContent.includes('[ID:')) {
                 try {
                     await this.correlateTrackingMessage(phoneNumber, messageContent, message.id.id);
                 } catch (correlationError) {
-                    console.error(`❌ [Tenant ${this.tenantId}] Erro na correlação de tracking:`, correlationError.message);
+                    console.error(`❌ [Tenant ${this.tenantId}] Erro na correlação de tracking por ID:`, correlationError.message);
+                }
+            }
+            
+            // 2. Correlação por TEMPO (2 minutos) - PRINCIPAL
+            if (!isAudioMessage) {
+                try {
+                    await this.correlateByTimeWindow(phoneNumber, messageContent, message.id.id);
+                } catch (correlationError) {
+                    console.error(`❌ [Tenant ${this.tenantId}] Erro na correlação de tracking por tempo:`, correlationError.message);
                 }
             }
             
@@ -592,6 +601,42 @@ class WhatsAppInstance {
             } catch (replyError) {
                 console.error(`❌ [Tenant ${this.tenantId}] Erro ao enviar mensagem de erro:`, replyError);
             }
+        }
+    }
+
+    // ⏰ Correlacionar por janela de tempo (2 minutos)
+    async correlateByTimeWindow(phoneNumber, messageContent, messageId) {
+        try {
+            console.log(`⏰ [Tenant ${this.tenantId}] Verificando correlação por tempo para: ${phoneNumber}`);
+            
+            // Fazer POST para a API de correlação por tempo
+            const response = await fetch(`${API_BASE}/api/v1/analytics-internal/internal/correlate-by-time`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    phoneNumber: phoneNumber,
+                    message: messageContent,
+                    messageId: messageId,
+                    tenantId: this.tenantId,
+                    timeWindowMinutes: 2 // 2 minutos
+                })
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    console.log(`✅ [Tenant ${this.tenantId}] Correlação por TEMPO: ${result.trackingId} ↔ ${phoneNumber} (${result.timeElapsed}s após clique)`);
+                } else {
+                    console.log(`⏰ [Tenant ${this.tenantId}] Nenhum clique recente encontrado para ${phoneNumber}`);
+                }
+            } else {
+                console.error(`❌ [Tenant ${this.tenantId}] Erro HTTP na correlação por tempo:`, response.status);
+            }
+            
+        } catch (error) {
+            console.error(`❌ [Tenant ${this.tenantId}] Erro ao correlacionar por tempo:`, error.message);
         }
     }
 

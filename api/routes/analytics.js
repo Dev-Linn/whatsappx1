@@ -311,6 +311,117 @@ module.exports = (db) => {
         }
     });
 
+    // ⏰ Correlacionar por janela de tempo (BACKEND INTERNAL)
+    router.post('/internal/correlate-by-time', async (req, res) => {
+        try {
+            const { phoneNumber, message, messageId, tenantId, timeWindowMinutes } = req.body;
+            
+            if (!phoneNumber || !message || !tenantId) {
+                return res.status(400).json({
+                    error: 'phoneNumber, message e tenantId são obrigatórios'
+                });
+            }
+            
+            const database = req.app.locals.db;
+            const timeWindow = timeWindowMinutes || 2; // Default 2 minutos
+            
+            console.log(`⏰ [TIME CORRELATION] Procurando cliques de ${phoneNumber} nos últimos ${timeWindow} minutos`);
+            
+            // Buscar cliques recentes deste número na janela de tempo
+            const recentClicks = await database.sequelize.query(`
+                SELECT 
+                    wct.tracking_id,
+                    wct.clicked_at,
+                    wtl.campaign_name,
+                    wtl.base_url,
+                    (julianday('now') - julianday(wct.clicked_at)) * 24 * 60 * 60 as seconds_elapsed
+                FROM whatsapp_click_tracking wct
+                JOIN whatsapp_tracking_links wtl ON wct.tracking_id = wtl.tracking_id
+                WHERE wct.tenant_id = ? 
+                AND wct.ip_address IN (
+                    SELECT DISTINCT ip_address 
+                    FROM whatsapp_click_tracking 
+                    WHERE tenant_id = ? 
+                    AND datetime(clicked_at, '+${timeWindow} minutes') > datetime('now')
+                )
+                AND datetime(wct.clicked_at, '+${timeWindow} minutes') > datetime('now')
+                ORDER BY wct.clicked_at DESC
+                LIMIT 5
+            `, {
+                replacements: [tenantId, tenantId],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            if (recentClicks.length > 0) {
+                // Pegar o clique mais recente que faz sentido
+                const mostRecentClick = recentClicks[0];
+                const trackingId = mostRecentClick.tracking_id;
+                const timeElapsed = Math.round(mostRecentClick.seconds_elapsed);
+                
+                console.log(`✅ [TIME CORRELATION] Clique encontrado: ${trackingId} (${timeElapsed}s atrás)`);
+                
+                // Verificar se já não foi correlacionado
+                const existingCorrelation = await database.sequelize.query(`
+                    SELECT * FROM whatsapp_message_correlation 
+                    WHERE tenant_id = ? AND tracking_id = ? AND phone_number = ?
+                `, {
+                    replacements: [tenantId, trackingId, phoneNumber],
+                    type: database.sequelize.QueryTypes.SELECT
+                });
+                
+                if (existingCorrelation.length === 0) {
+                    // Salvar correlação por tempo
+                    await database.sequelize.query(`
+                        INSERT INTO whatsapp_message_correlation 
+                        (tenant_id, tracking_id, phone_number, message_id, conversation_id, message_content, correlation_method, time_elapsed_seconds, correlated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                    `, {
+                        replacements: [
+                            tenantId,
+                            trackingId,
+                            phoneNumber,
+                            messageId || null,
+                            null,
+                            message,
+                            'time_window',
+                            timeElapsed
+                        ]
+                    });
+                    
+                    console.log(`✅ [TIME CORRELATION] Mensagem correlacionada por TEMPO: ${trackingId} ↔ ${phoneNumber} (${timeElapsed}s)`);
+                    
+                    res.json({
+                        success: true,
+                        message: 'Mensagem correlacionada por tempo',
+                        trackingId: trackingId,
+                        campaign: mostRecentClick.campaign_name,
+                        timeElapsed: timeElapsed,
+                        method: 'time_window'
+                    });
+                } else {
+                    console.log(`🔍 [TIME CORRELATION] Já correlacionado: ${trackingId} ↔ ${phoneNumber}`);
+                    res.json({
+                        success: false,
+                        message: 'Mensagem já correlacionada'
+                    });
+                }
+            } else {
+                console.log(`⏰ [TIME CORRELATION] Nenhum clique recente encontrado para correlação`);
+                res.json({
+                    success: false,
+                    message: 'Nenhum clique recente encontrado'
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ [TIME CORRELATION] Erro ao correlacionar por tempo:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+
     // Correlacionar mensagem WhatsApp com tracking (BACKEND INTERNAL)
     router.post('/internal/correlate-whatsapp', async (req, res) => {
         try {
@@ -462,6 +573,63 @@ module.exports = (db) => {
                 error: 'Erro interno do servidor',
                 message: error.message
             });
+        }
+    });
+
+    // Registrar abertura do WhatsApp (INTERNO)
+    router.post('/internal/track-whatsapp-open', async (req, res) => {
+        try {
+            const { trackingId, tenantId, timeSpent, whatsappUrl } = req.body;
+            
+            const database = req.app.locals.db;
+            
+            // Verificar se tabela existe, se não, ignorar silenciosamente
+            try {
+                await database.sequelize.query(`
+                    INSERT INTO whatsapp_opens 
+                    (tenant_id, tracking_id, time_spent_before_open, whatsapp_url, opened_at)
+                    VALUES (?, ?, ?, ?, datetime('now'))
+                `, {
+                    replacements: [tenantId, trackingId, timeSpent, whatsappUrl]
+                });
+                
+                console.log(`📱 [WHATSAPP OPEN] WhatsApp aberto para ${trackingId} após ${timeSpent}s`);
+            } catch (tableError) {
+                // Ignorar erro de tabela não existir
+                console.log(`⚠️ [WHATSAPP OPEN] Tabela whatsapp_opens não existe, ignorando...`);
+            }
+            
+            res.json({ success: true });
+            
+        } catch (error) {
+            console.error('❌ [WHATSAPP OPEN] Erro ao registrar abertura WhatsApp:', error);
+            res.json({ success: false }); // Não falhar nunca
+        }
+    });
+
+    // Registrar dados extras coletados na página intermediária (INTERNO)
+    router.post('/internal/track-extra-data', async (req, res) => {
+        try {
+            const { trackingId, tenantId, latitude, longitude, accuracy } = req.body;
+            
+            const database = req.app.locals.db;
+            
+            await database.sequelize.query(`
+                UPDATE whatsapp_click_tracking 
+                SET latitude = ?, longitude = ?, location_accuracy = ?
+                WHERE tenant_id = ? AND tracking_id = ?
+                ORDER BY clicked_at DESC LIMIT 1
+            `, {
+                replacements: [latitude, longitude, accuracy, tenantId, trackingId]
+            });
+            
+            console.log(`📍 [EXTRA DATA] Localização salva para ${trackingId}: ${latitude}, ${longitude}`);
+            
+            res.json({ success: true });
+            
+        } catch (error) {
+            console.error('❌ [EXTRA DATA] Erro ao salvar dados extras:', error);
+            res.json({ success: false }); // Não falhar nunca
         }
     });
 
