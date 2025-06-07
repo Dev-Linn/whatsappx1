@@ -1054,9 +1054,7 @@ module.exports = (db) => {
                 SELECT 
                     wmc.phone_number,
                     wmc.message_content,
-                    wmc.correlated_at,
-                    wmc.user_agent,
-                    wmc.ip_address
+                    wmc.correlated_at
                 FROM whatsapp_message_correlation wmc
                 WHERE wmc.tracking_id = ? AND wmc.tenant_id = ?
                 ORDER BY wmc.correlated_at DESC
@@ -1098,8 +1096,6 @@ module.exports = (db) => {
                             phone_number: correlation.phone_number,
                             first_message: correlation.message_content,
                             contacted_at: correlation.correlated_at,
-                            user_agent: correlation.user_agent,
-                            ip_address: correlation.ip_address,
                             user_info: userInfo[0] || null,
                             recent_messages: userMessages || [],
                             message_count: userMessages ? userMessages.length : 0
@@ -1110,8 +1106,6 @@ module.exports = (db) => {
                             phone_number: correlation.phone_number,
                             first_message: correlation.message_content,
                             contacted_at: correlation.correlated_at,
-                            user_agent: correlation.user_agent,
-                            ip_address: correlation.ip_address,
                             user_info: null,
                             recent_messages: [],
                             message_count: 0

@@ -336,7 +336,7 @@ const LinkManagement: React.FC = () => {
                 // Extrair informações do WhatsApp
                 const whatsappInfo = {
                   number: link.whatsapp_number,
-                  message: link.default_message ? decodeURIComponent(link.default_message) : 'Sem mensagem padrão',
+                  message: link.default_message ? decodeURIComponent(link.default_message) : '',
                   formattedNumber: link.whatsapp_number 
                     ? link.whatsapp_number.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')
                     : 'Número não informado'
@@ -396,7 +396,7 @@ const LinkManagement: React.FC = () => {
                           </div>
                           
                           {/* Mensagem padrão */}
-                          {link.default_message && whatsappInfo.message !== 'Sem mensagem padrão' && (
+                          {link.default_message && whatsappInfo.message && (
                             <div className="mt-2 p-2 bg-white rounded-lg border shadow-sm">
                               <div className="flex items-center space-x-2 mb-1">
                                 <MessageCircle className="w-3 h-3 text-green-600" />
