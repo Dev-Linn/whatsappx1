@@ -1023,6 +1023,123 @@ module.exports = (db) => {
         }
     });
 
+    // 👥 Buscar leads de um link específico
+    router.get('/links/:trackingId/leads', async (req, res) => {
+        try {
+            const { trackingId } = req.params;
+            const database = req.app.locals.db;
+            
+            console.log(`👥 [LINK LEADS] Buscando leads para link ${trackingId} do tenant ${req.tenant.id}`);
+            
+            // 1. Verificar se o link pertence ao tenant
+            const linkCheck = await database.sequelize.query(`
+                SELECT id, campaign_name, whatsapp_number, default_message 
+                FROM whatsapp_tracking_links 
+                WHERE tracking_id = ? AND tenant_id = ?
+            `, {
+                replacements: [trackingId, req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            if (linkCheck.length === 0) {
+                return res.status(404).json({
+                    error: 'Link não encontrado'
+                });
+            }
+            
+            const linkInfo = linkCheck[0];
+            
+            // 2. Buscar correlações (leads) deste link
+            const correlations = await database.sequelize.query(`
+                SELECT 
+                    wmc.phone_number,
+                    wmc.message_content,
+                    wmc.correlated_at,
+                    wmc.user_agent,
+                    wmc.ip_address
+                FROM whatsapp_message_correlation wmc
+                WHERE wmc.tracking_id = ? AND wmc.tenant_id = ?
+                ORDER BY wmc.correlated_at DESC
+            `, {
+                replacements: [trackingId, req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            // 3. Para cada lead, buscar informações adicionais se disponível
+            const enrichedLeads = await Promise.all(
+                correlations.map(async (correlation) => {
+                    try {
+                        // Buscar mais mensagens desta pessoa
+                        const userMessages = await database.sequelize.query(`
+                            SELECT content, timestamp, is_bot
+                            FROM messages m
+                            JOIN conversations c ON m.conversation_id = c.id
+                            JOIN users u ON c.user_id = u.id
+                            WHERE u.phone = ? AND u.tenant_id = ?
+                            ORDER BY m.timestamp DESC
+                            LIMIT 5
+                        `, {
+                            replacements: [correlation.phone_number, req.tenant.id],
+                            type: database.sequelize.QueryTypes.SELECT
+                        });
+                        
+                        // Buscar dados do usuário
+                        const userInfo = await database.sequelize.query(`
+                            SELECT name, phone, stage, sentiment, created_at
+                            FROM users
+                            WHERE phone = ? AND tenant_id = ?
+                            LIMIT 1
+                        `, {
+                            replacements: [correlation.phone_number, req.tenant.id],
+                            type: database.sequelize.QueryTypes.SELECT
+                        });
+                        
+                        return {
+                            phone_number: correlation.phone_number,
+                            first_message: correlation.message_content,
+                            contacted_at: correlation.correlated_at,
+                            user_agent: correlation.user_agent,
+                            ip_address: correlation.ip_address,
+                            user_info: userInfo[0] || null,
+                            recent_messages: userMessages || [],
+                            message_count: userMessages ? userMessages.length : 0
+                        };
+                    } catch (error) {
+                        console.error('❌ Erro ao enriquecer lead:', error);
+                        return {
+                            phone_number: correlation.phone_number,
+                            first_message: correlation.message_content,
+                            contacted_at: correlation.correlated_at,
+                            user_agent: correlation.user_agent,
+                            ip_address: correlation.ip_address,
+                            user_info: null,
+                            recent_messages: [],
+                            message_count: 0
+                        };
+                    }
+                })
+            );
+            
+            console.log(`👥 [LINK LEADS] Encontrados ${enrichedLeads.length} leads para o link ${trackingId}`);
+            
+            res.json({
+                success: true,
+                data: {
+                    link_info: linkInfo,
+                    leads: enrichedLeads,
+                    total_leads: enrichedLeads.length
+                }
+            });
+            
+        } catch (error) {
+            console.error('❌ [LINK LEADS] Erro ao buscar leads:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+
     // ==================== FUNÇÕES AUXILIARES ====================
     
     function generateTrackingCode(tenantId) {

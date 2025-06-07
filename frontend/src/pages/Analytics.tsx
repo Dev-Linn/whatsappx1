@@ -819,10 +819,10 @@ const Analytics = () => {
             <Card className="bg-gradient-to-br from-blue-900/30 to-blue-800/30 border-blue-600">
               <CardContent className="p-6 text-center">
                 <div className="text-3xl mb-3">📱</div>
-                <h3 className="text-white font-bold mb-2">2. Receba Leads</h3>
-                <p className="text-blue-200 text-sm">
-                  Seus clientes clicam nos links e chegam ao WhatsApp. Cada conversa é automaticamente rastreada
-                </p>
+                                 <h3 className="text-white font-bold mb-2">2. Receba Leads</h3>
+                 <p className="text-blue-200 text-sm">
+                   Clientes clicam nos links e chegam ao WhatsApp. O sistema correlaciona automaticamente conversas com as visitas ao site
+                 </p>
               </CardContent>
             </Card>
             
@@ -979,7 +979,7 @@ const Analytics = () => {
 
                 <div className="mt-4 p-3 bg-yellow-900/20 border border-yellow-600 rounded">
                   <p className="text-yellow-200 text-sm">
-                    💡 <strong>Insight:</strong> Com essa integração, você saberia que 23 de cada 100 pessoas que clicam nos seus links do WhatsApp fazem uma compra!
+                    💡 <strong>Insight:</strong> Com essa integração, você rastreia o caminho completo: WhatsApp → Site → Conversão, permitindo otimizar suas campanhas baseado em dados reais!
                   </p>
                 </div>
                 

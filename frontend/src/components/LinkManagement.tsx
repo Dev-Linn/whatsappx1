@@ -84,9 +84,10 @@ const LinkManagement: React.FC = () => {
     open: false,
     link: null
   });
-  const [viewDialog, setViewDialog] = useState<{ open: boolean; link: LinkData | null }>({
+  const [leadsDialog, setLeadsDialog] = useState<{ open: boolean; link: LinkData | null; leads: any[] }>({
     open: false,
-    link: null
+    link: null,
+    leads: []
   });
   const [activeSection, setActiveSection] = useState<'links' | 'conversations'>('links');
 
@@ -135,6 +136,31 @@ const LinkManagement: React.FC = () => {
         setDeleteDialog({ open: false, link: null });
       } else {
         console.error('Erro ao deletar link');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    }
+  };
+
+  const fetchLinkLeads = async (trackingId: string, linkData: LinkData) => {
+    try {
+      const token = localStorage.getItem('whatsapp_bot_token');
+      
+      const response = await fetch(`/api/v1/analytics/links/${trackingId}/leads`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const responseData = await response.json();
+        setLeadsDialog({
+          open: true,
+          link: linkData,
+          leads: responseData.data.leads || []
+        });
+      } else {
+        console.error('Erro ao carregar leads');
       }
     } catch (error) {
       console.error('Erro:', error);
@@ -346,10 +372,14 @@ const LinkManagement: React.FC = () => {
 
                 const status = getStatusInfo();
 
-                return (
-                  <Card key={link.tracking_id} className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${status.borderColor} border-2`}>
-                    {/* Header com gradiente */}
-                    <div className={`${status.bgColor} px-6 py-4 border-b ${status.borderColor}`}>
+                                 return (
+                   <Card 
+                     key={link.tracking_id} 
+                     className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${status.borderColor} border-2 cursor-pointer`}
+                     onClick={() => fetchLinkLeads(link.tracking_id, link)}
+                   >
+                     {/* Header com gradiente */}
+                     <div className={`${status.bgColor} px-6 py-4 border-b ${status.borderColor}`}>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center space-x-2 mb-2">
@@ -381,15 +411,10 @@ const LinkManagement: React.FC = () => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => setViewDialog({ open: true, link })}
-                            className="hover:bg-white/50"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setDeleteDialog({ open: true, link })}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteDialog({ open: true, link });
+                            }}
                             className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -448,15 +473,24 @@ const LinkManagement: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Link de Ação */}
-                      <Button 
-                        onClick={() => window.open(link.base_url, '_blank')} 
-                        className="w-full bg-green-600 hover:bg-green-700 text-white"
-                        size="sm"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Testar Link
-                      </Button>
+                      {/* Indicador de clique para ver leads */}
+                      <div className="text-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800 font-medium mb-2">
+                          👆 Clique no card para ver todos os leads
+                        </p>
+                        <Button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(link.base_url, '_blank');
+                          }} 
+                          variant="outline"
+                          className="border-green-600 text-green-600 hover:bg-green-50"
+                          size="sm"
+                        >
+                          <ExternalLink className="w-4 h-4 mr-2" />
+                          Testar Link
+                        </Button>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -547,75 +581,85 @@ const LinkManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Visualização da Jornada */}
-      <Dialog open={viewDialog.open} onOpenChange={(open) => 
-        setViewDialog({ open, link: open ? viewDialog.link : null })
+      {/* Dialog de Leads */}
+      <Dialog open={leadsDialog.open} onOpenChange={(open) =>
+        setLeadsDialog({ open, link: open ? leadsDialog.link : null, leads: open ? leadsDialog.leads : [] })
       }>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>🎯 {viewDialog.link?.campaign_name}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              🎯 {leadsDialog.link?.campaign_name}
+              <Badge variant="outline" className="ml-2">
+                {leadsDialog.leads.length} lead(s)
+              </Badge>
+            </DialogTitle>
             <DialogDescription>
-              Jornada completa do cliente para este link de tracking
+              Todos os leads que vieram através deste link
             </DialogDescription>
           </DialogHeader>
           
-          {viewDialog.link && (
-            <div className="space-y-6">
-              {/* Métricas Resumo */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{viewDialog.link.metrics.clickCount}</p>
-                  <p className="text-sm text-gray-600">Cliques</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{viewDialog.link.metrics.correlationCount}</p>
-                  <p className="text-sm text-gray-600">Conversões</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">{viewDialog.link.metrics.conversionRate}%</p>
-                  <p className="text-sm text-gray-600">Taxa</p>
-                </div>
+          <div className="space-y-4">
+            {leadsDialog.leads.length > 0 ? (
+              leadsDialog.leads.map((lead, index) => (
+                <Card key={index} className="border border-gray-200">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="text-2xl">👤</div>
+                          <div>
+                            <h4 className="font-semibold text-lg">
+                              {lead.phone_number.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')}
+                            </h4>
+                            <p className="text-sm text-gray-500">
+                              Contatou em {format(new Date(lead.contacted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        {/* Primeira Mensagem */}
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <MessageCircle className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">Primeira mensagem:</span>
+                          </div>
+                          <p className="text-green-900 italic">"{lead.first_message}"</p>
+                        </div>
+                        
+                        {/* Informações Adicionais */}
+                        {lead.user_info && (
+                          <div className="text-sm text-gray-600 space-y-1">
+                            {lead.user_info.name && (
+                              <p><span className="font-medium">Nome:</span> {lead.user_info.name}</p>
+                            )}
+                            {lead.user_info.stage && (
+                              <p><span className="font-medium">Estágio:</span> {lead.user_info.stage}</p>
+                            )}
+                            <p><span className="font-medium">Mensagens:</span> {lead.message_count} conversas</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Status */}
+                      <div className="text-center">
+                        <Badge className="bg-green-100 text-green-800">
+                          Lead Ativo
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum lead ainda</h3>
+                <p className="text-gray-500">
+                  Este link ainda não gerou conversas no WhatsApp. Compartilhe o link para começar a receber leads!
+                </p>
               </div>
-
-              {/* Timeline da Jornada */}
-              <div>
-                <h4 className="font-semibold mb-4">📊 Jornada do Cliente</h4>
-                {viewDialog.link.journey.length > 0 ? (
-                  <JourneyTimeline journey={viewDialog.link.journey} />
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <AlertCircle className="w-8 h-8 mx-auto mb-2" />
-                    <p>Nenhuma interação registrada ainda</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Detalhes Técnicos */}
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-2">🔧 Detalhes Técnicos</h4>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tracking ID:</span>
-                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">
-                      {viewDialog.link.tracking_id}
-                    </code>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tipo:</span>
-                    <span>{viewDialog.link.link_type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">WhatsApp:</span>
-                    <span>{viewDialog.link.whatsapp_number}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Criado em:</span>
-                    <span>{formatDate(viewDialog.link.created_at)}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
