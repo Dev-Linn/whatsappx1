@@ -177,43 +177,53 @@ module.exports = (db) => {
 
     // Gerar link rastreado para WhatsApp  
     router.post('/integration/generate-link', async (req, res) => {
-        console.log('🔗 [GENERATE LINK] =================== SUPER DEBUG INÍCIO ===================');
-        console.log('🔗 [GENERATE LINK] Iniciando geração de link...');
-        console.log('🔗 [GENERATE LINK] Tenant ID:', req.tenant?.id);
-        console.log('🔗 [GENERATE LINK] Tenant completo:', JSON.stringify(req.tenant, null, 2));
-        console.log('🔗 [GENERATE LINK] Body:', JSON.stringify(req.body, null, 2));
-        console.log('🔗 [GENERATE LINK] Headers:', JSON.stringify(req.headers, null, 2));
-        console.log('🔗 [GENERATE LINK] req.app.locals.db existe?', !!req.app.locals.db);
-        console.log('🔗 [GENERATE LINK] Database:', req.app.locals.db ? 'EXISTE' : 'NÃO EXISTE');
-        console.log('🔗 [GENERATE LINK] =================== SUPER DEBUG FIM ===================');
         try {
-            console.log('🔗 [GENERATE LINK] Entrando no try block...');
-            const { baseUrl, campaignName, userId } = req.body;
-            console.log('🔗 [GENERATE LINK] Variáveis extraídas:', { baseUrl, campaignName, userId });
+            const { linkType, destinationUrl, whatsappNumber, message, campaignName, userId } = req.body;
             
-            if (!baseUrl) {
-                console.log('🔗 [GENERATE LINK] ❌ URL base não fornecida');
+            console.log('🔗 [GENERATE LINK] Dados recebidos:', {
+                linkType, destinationUrl, whatsappNumber, message, campaignName
+            });
+            
+            // Validar tipo de link
+            if (!linkType || !['whatsapp', 'website', 'custom'].includes(linkType)) {
                 return res.status(400).json({
-                    error: 'URL base é obrigatória'
+                    error: 'Tipo de link é obrigatório (whatsapp, website, custom)'
                 });
             }
             
-            console.log('🔗 [GENERATE LINK] ✅ URL base válida:', baseUrl);
+            let finalDestinationUrl;
+            
+            // Determinar URL de destino baseado no tipo
+            switch (linkType) {
+                case 'whatsapp':
+                    if (!whatsappNumber) {
+                        return res.status(400).json({
+                            error: 'Número do WhatsApp é obrigatório para links WhatsApp'
+                        });
+                    }
+                    const encodedMessage = encodeURIComponent(message || 'Olá! Vim através do link rastreado.');
+                    finalDestinationUrl = `https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${encodedMessage}`;
+                    break;
+                    
+                case 'website':
+                case 'custom':
+                    if (!destinationUrl) {
+                        return res.status(400).json({
+                            error: 'URL de destino é obrigatória'
+                        });
+                    }
+                    finalDestinationUrl = destinationUrl;
+                    break;
+                    
+                default:
+                    return res.status(400).json({
+                        error: 'Tipo de link inválido'
+                    });
+            }
+            
+            // Gerar ID único
             const trackingId = `wa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            console.log('🔗 [GENERATE LINK] 🆔 Tracking ID gerado:', trackingId);
-            
             const database = req.app.locals.db;
-            console.log('🔗 [GENERATE LINK] 📊 Database obtido:', database ? 'SUCESSO' : 'FALHOU');
-            console.log('🔗 [GENERATE LINK] 📊 Database.sequelize existe?', !!database?.sequelize);
-            
-            console.log('🔗 [GENERATE LINK] 💾 Tentando salvar no banco...');
-            console.log('🔗 [GENERATE LINK] 💾 Parâmetros da query:', {
-                tenant_id: req.tenant.id,
-                tracking_id: trackingId,
-                base_url: baseUrl,
-                campaign_name: campaignName || 'whatsapp_campaign',
-                user_id: userId || null
-            });
             
             // Salvar link rastreado
             await database.sequelize.query(`
@@ -224,22 +234,22 @@ module.exports = (db) => {
                 replacements: [
                     req.tenant.id,
                     trackingId,
-                    baseUrl,
-                    campaignName || 'whatsapp_campaign',
+                    finalDestinationUrl,
+                    campaignName || 'default',
                     userId || null
                 ]
             });
             
             // Criar URL de tracking que redireciona e conta o clique
-            const originalUrl = `${baseUrl}?utm_source=whatsapp&utm_medium=chat&utm_campaign=${campaignName || 'default'}&wa=${trackingId}&tenant=${req.tenant.id}`;
-            const trackedUrl = `https://lucrogourmet.shop/track/${trackingId}?tenant=${req.tenant.id}&url=${encodeURIComponent(originalUrl)}`;
+            const trackedUrl = `https://lucrogourmet.shop/track/${trackingId}?tenant=${req.tenant.id}&url=${encodeURIComponent(finalDestinationUrl)}`;
             
             res.json({
                 success: true,
                 trackingId: trackingId,
                 trackedUrl: trackedUrl,
-                originalUrl: originalUrl,
-                shortUrl: trackedUrl // Pode ser integrado com encurtador futuramente
+                originalUrl: finalDestinationUrl,
+                linkType: linkType,
+                shortUrl: trackedUrl
             });
             
         } catch (error) {
@@ -293,63 +303,8 @@ module.exports = (db) => {
         }
     });
 
-    return router;
-};
-
-// ROTA PÚBLICA PARA TRACKING (SEM AUTENTICAÇÃO)
-const publicRouter = express.Router();
-
-// Rota pública para capturar cliques (sem autenticação)
-publicRouter.get('/track/:trackingId', async (req, res) => {
-    try {
-        console.log('🔍 [PUBLIC TRACK] Clique capturado:', req.params.trackingId);
-        console.log('🔍 [PUBLIC TRACK] Query params:', req.query);
-        console.log('🔍 [PUBLIC TRACK] Headers:', req.headers);
-        
-        const { trackingId } = req.params;
-        const tenantId = req.query.tenant;
-        
-        if (!trackingId || !tenantId) {
-            console.log('❌ [PUBLIC TRACK] Parâmetros faltando');
-            return res.redirect(req.query.url || '/');
-        }
-        
-        const database = req.app.locals.db;
-        
-        // Registrar clique
-        await database.sequelize.query(`
-            INSERT INTO whatsapp_click_tracking 
-            (tenant_id, tracking_id, user_agent, ip_address, referrer, clicked_at)
-            VALUES (?, ?, ?, ?, ?, datetime('now'))
-        `, {
-            replacements: [
-                tenantId,
-                trackingId,
-                req.headers['user-agent'] || '',
-                req.ip || req.connection.remoteAddress || '',
-                req.headers['referer'] || ''
-            ]
-        });
-        
-        console.log('✅ [PUBLIC TRACK] Clique registrado com sucesso');
-        
-        // Redirecionar para a URL original
-        const originalUrl = req.query.url || '/';
-        res.redirect(originalUrl);
-        
-    } catch (error) {
-        console.error('❌ [PUBLIC TRACK] Erro ao registrar clique:', error);
-        res.redirect(req.query.url || '/');
-    }
-});
-
-module.exports = (db) => {
-    const mainRouter = module.exports(db);
-    return mainRouter;
-};
-
-module.exports.publicRouter = publicRouter;
-
+    // ==================== FUNÇÕES AUXILIARES ====================
+    
     function generateTrackingCode(tenantId) {
         return `
 <!-- WhatsApp Analytics Tracking Code -->
