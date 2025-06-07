@@ -311,7 +311,86 @@ module.exports = (db) => {
         }
     });
 
-    // Correlacionar mensagem WhatsApp com tracking
+    // Correlacionar mensagem WhatsApp com tracking (BACKEND INTERNAL)
+    router.post('/internal/correlate-whatsapp', async (req, res) => {
+        try {
+            const { phoneNumber, message, messageId, conversationId, tenantId } = req.body;
+            
+            if (!phoneNumber || !message || !tenantId) {
+                return res.status(400).json({
+                    error: 'phoneNumber, message e tenantId são obrigatórios'
+                });
+            }
+            
+            const database = req.app.locals.db;
+            
+            // Buscar tracking ID na mensagem usando regex
+            const trackingIdMatch = message.match(/\[ID:(wa_\d+_[a-z0-9]+)\]/);
+            
+            if (trackingIdMatch) {
+                const trackingId = trackingIdMatch[1];
+                
+                console.log(`🔍 [INTERNAL CORRELATION] Tracking ID encontrado: ${trackingId}`);
+                
+                // Verificar se o tracking ID existe
+                const trackingLink = await database.sequelize.query(`
+                    SELECT * FROM whatsapp_tracking_links 
+                    WHERE tenant_id = ? AND tracking_id = ?
+                `, {
+                    replacements: [tenantId, trackingId],
+                    type: database.sequelize.QueryTypes.SELECT
+                });
+                
+                if (trackingLink.length > 0) {
+                    // Salvar correlação
+                    await database.sequelize.query(`
+                        INSERT INTO whatsapp_message_correlation 
+                        (tenant_id, tracking_id, phone_number, message_id, conversation_id, message_content, correlated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+                    `, {
+                        replacements: [
+                            tenantId,
+                            trackingId,
+                            phoneNumber,
+                            messageId || null,
+                            conversationId || null,
+                            message
+                        ]
+                    });
+                    
+                    console.log(`✅ [INTERNAL CORRELATION] Mensagem correlacionada: ${trackingId} ↔ ${phoneNumber} (Campanha: ${trackingLink[0].campaign_name})`);
+                    
+                    res.json({
+                        success: true,
+                        message: 'Mensagem correlacionada com sucesso',
+                        trackingId: trackingId,
+                        campaign: trackingLink[0].campaign_name
+                    });
+                } else {
+                    console.log(`🔍 [INTERNAL CORRELATION] Tracking ID não encontrado no banco: ${trackingId}`);
+                    res.json({
+                        success: false,
+                        message: 'Tracking ID não encontrado'
+                    });
+                }
+            } else {
+                console.log(`🔍 [INTERNAL CORRELATION] Nenhum tracking ID encontrado na mensagem: ${message}`);
+                res.json({
+                    success: false,
+                    message: 'Nenhum tracking ID encontrado na mensagem'
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ [INTERNAL CORRELATION] Erro ao correlacionar mensagem:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+
+    // Correlacionar mensagem WhatsApp com tracking (FRONTEND)
     router.post('/integration/correlate-whatsapp', async (req, res) => {
         try {
             const { phoneNumber, message, messageId, conversationId } = req.body;

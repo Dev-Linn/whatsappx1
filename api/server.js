@@ -712,6 +712,9 @@ async function startServer() {
 console.log('🔍 [SERVER DEBUG] analyticsRoutes type:', typeof analyticsRoutes);
         app.use('/api/v1/analytics', authenticateToken, tenantIsolation, analyticsRoutes(db));
         
+        // Rota INTERNA para correlação (sem autenticação - apenas para backend)
+        app.use('/api/v1/analytics-internal', analyticsRoutes(db));
+        
         // Rotas de administração
         const adminRoutes = require('./routes/admin');
         app.use('/api/v1/admin', adminRoutes(db));
