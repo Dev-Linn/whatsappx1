@@ -1,18 +1,19 @@
 #!/usr/bin/env node
 
 // Script para verificar e criar todas as tabelas necessárias para Analytics
-const Database = require('better-sqlite3');
-const path = require('path');
+const ApiDatabase = require('./database');
 
 async function checkAndCreateTables() {
     console.log('🔍 Verificando e criando tabelas do Analytics...\n');
     
-    const dbPath = path.join(__dirname, '../backend/data/whatsapp.db');
-    const db = new Database(dbPath);
+    const db = new ApiDatabase();
+    await db.initialize();
     
     try {
         // Verificar tabelas existentes
-        const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+        const tables = await db.sequelize.query("SELECT name FROM sqlite_master WHERE type='table'", {
+            type: db.sequelize.QueryTypes.SELECT
+        });
         const existingTables = tables.map(t => t.name);
         
         console.log('📋 Tabelas existentes:', existingTables.join(', '));
@@ -114,11 +115,14 @@ async function checkAndCreateTables() {
         
         for (const [tableName, createSQL] of Object.entries(requiredTables)) {
             try {
-                db.exec(createSQL);
+                await db.sequelize.query(createSQL);
                 
                 // Verificar se foi criada/existe
-                const exists = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").get(tableName);
-                if (exists) {
+                const exists = await db.sequelize.query("SELECT name FROM sqlite_master WHERE type='table' AND name=?", {
+                    replacements: [tableName],
+                    type: db.sequelize.QueryTypes.SELECT
+                });
+                if (exists.length > 0) {
                     console.log(`✅ ${tableName} - OK`);
                 } else {
                     console.log(`❌ ${tableName} - FALHA`);
@@ -145,7 +149,7 @@ async function checkAndCreateTables() {
         
         for (const indexSQL of indexes) {
             try {
-                db.exec(indexSQL);
+                await db.sequelize.query(indexSQL);
                 console.log(`✅ Índice criado`);
             } catch (error) {
                 console.log(`⚠️ Índice: ${error.message}`);
@@ -157,8 +161,10 @@ async function checkAndCreateTables() {
         
         for (const tableName of Object.keys(requiredTables)) {
             try {
-                const count = db.prepare(`SELECT COUNT(*) as count FROM ${tableName}`).get();
-                console.log(`📋 ${tableName}: ${count.count} registros`);
+                const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM ${tableName}`, {
+                    type: db.sequelize.QueryTypes.SELECT
+                });
+                console.log(`📋 ${tableName}: ${result[0].count} registros`);
             } catch (error) {
                 console.log(`❌ ${tableName}: Erro - ${error.message}`);
             }
@@ -169,7 +175,7 @@ async function checkAndCreateTables() {
     } catch (error) {
         console.error('❌ Erro geral:', error);
     } finally {
-        db.close();
+        await db.close();
     }
 }
 
