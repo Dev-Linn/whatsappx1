@@ -191,6 +191,9 @@ module.exports = (db) => {
                 });
             }
             
+            // Gerar ID único ANTES de usar
+            const trackingId = `wa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
             let finalDestinationUrl;
             
             // Determinar URL de destino baseado no tipo
@@ -224,9 +227,6 @@ module.exports = (db) => {
                         error: 'Tipo de link inválido'
                     });
             }
-            
-            // Gerar ID único
-            const trackingId = `wa_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             const database = req.app.locals.db;
             
             // Salvar link rastreado
