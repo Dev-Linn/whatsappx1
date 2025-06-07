@@ -10,23 +10,34 @@ async function resetEverything() {
     await db.initialize();
     
     try {
-        // Mostrar dados atuais
-        console.log('📊 DADOS ATUAIS:');
-        const tenantCount = await db.Tenant.count();
-        const userCount = await db.User.count();
-        const conversationCount = await db.Conversation.count();
-        const messageCount = await db.Message.count();
-        const costCount = await db.ApiCost.count();
-        const promptCount = await db.TenantPrompt.count();
+        // Verificar TODAS as tabelas no início
+        console.log('📊 DADOS ATUAIS EM TODAS AS TABELAS:');
         
-        console.log(`🏢 Tenants: ${tenantCount}`);
-        console.log(`👥 Usuários: ${userCount}`);
-        console.log(`💬 Conversas: ${conversationCount}`);
-        console.log(`📝 Mensagens: ${messageCount}`);
-        console.log(`💰 Custos: ${costCount}`);
-        console.log(`🤖 Prompts: ${promptCount}`);
+        const allTablesCheck = [
+            'tenants', 'users', 'conversations', 'messages', 'api_costs', 'tenant_prompts',
+            'whatsapp_tracking_links', 'whatsapp_click_tracking', 'whatsapp_message_correlation',
+            'google_analytics_tokens', 'google_analytics_selections', 'system_logs', 'uptime_records'
+        ];
         
-        if (tenantCount === 0 && userCount === 0 && messageCount === 0 && promptCount === 0) {
+        const currentCounts = {};
+        let totalRecords = 0;
+        
+        for (const table of allTablesCheck) {
+            try {
+                const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM ${table}`);
+                const count = result[0]?.count || 0;
+                currentCounts[table] = count;
+                totalRecords += count;
+                console.log(`📋 ${table}: ${count}`);
+            } catch (error) {
+                console.log(`⚠️ ${table}: Tabela não existe`);
+                currentCounts[table] = 0;
+            }
+        }
+        
+        console.log(`\n🔢 TOTAL DE REGISTROS: ${totalRecords}`);
+        
+        if (totalRecords === 0) {
             console.log('\n✅ Banco já está completamente vazio!');
             return;
         }
@@ -90,28 +101,26 @@ async function resetEverything() {
         await db.sequelize.query('PRAGMA foreign_keys = ON');
         console.log('  🔒 Foreign keys reabilitadas');
         
-        // Verificar resultado de todas as tabelas principais
-        console.log('\n📊 DADOS APÓS LIMPEZA:');
+        // Verificar resultado de TODAS as tabelas
+        console.log('\n📊 DADOS APÓS LIMPEZA EM TODAS AS TABELAS:');
         
         const finalCounts = {};
-        for (const table of ['tenants', 'users', 'conversations', 'messages', 'api_costs', 'tenant_prompts', 'whatsapp_tracking_links', 'whatsapp_click_tracking', 'whatsapp_message_correlation']) {
+        let finalTotalRecords = 0;
+        
+        for (const table of allTablesCheck) {
             try {
                 const result = await db.sequelize.query(`SELECT COUNT(*) as count FROM ${table}`);
-                finalCounts[table] = result[0]?.count || 0;
+                const count = result[0]?.count || 0;
+                finalCounts[table] = count;
+                finalTotalRecords += count;
+                console.log(`📋 ${table}: ${count}`);
             } catch (error) {
-                finalCounts[table] = 'N/A';
+                console.log(`⚠️ ${table}: Erro - ${error.message}`);
+                finalCounts[table] = 'ERRO';
             }
         }
         
-        console.log(`🏢 Tenants: ${finalCounts.tenants}`);
-        console.log(`👥 Usuários: ${finalCounts.users}`);
-        console.log(`💬 Conversas: ${finalCounts.conversations}`);
-        console.log(`📝 Mensagens: ${finalCounts.messages}`);
-        console.log(`💰 Custos: ${finalCounts.api_costs}`);
-        console.log(`🤖 Prompts: ${finalCounts.tenant_prompts}`);
-        console.log(`🔗 Links Tracking: ${finalCounts.whatsapp_tracking_links}`);
-        console.log(`👆 Cliques: ${finalCounts.whatsapp_click_tracking}`);
-        console.log(`🔄 Correlações: ${finalCounts.whatsapp_message_correlation}`);
+        console.log(`\n🔢 TOTAL DE REGISTROS APÓS LIMPEZA: ${finalTotalRecords}`);
         
         // Testar criação de novo tenant para verificar se AUTO_INCREMENT foi resetado
         console.log('\n🧪 TESTANDO AUTO_INCREMENT...');
@@ -129,11 +138,12 @@ async function resetEverything() {
         await db.sequelize.query("DELETE FROM sqlite_sequence WHERE name = 'tenants'");
         console.log(`🧹 Tenant de teste removido`);
         
-        if (finalTenantCount === 0 && finalUserCount === 0 && finalMessageCount === 0 && finalPromptCount === 0) {
+        if (finalTotalRecords === 0) {
             console.log('\n🎉 BANCO COMPLETAMENTE LIMPO E AUTO_INCREMENT RESETADO!');
             console.log('📝 Próximo tenant criado terá ID = 1');
+            console.log('🔥 Todas as ' + allTablesCheck.length + ' tabelas foram limpas com sucesso!');
         } else {
-            console.log('\n⚠️ Alguns dados não foram removidos');
+            console.log('\n⚠️ Alguns dados não foram removidos (' + finalTotalRecords + ' registros restantes)');
         }
         
     } catch (error) {
