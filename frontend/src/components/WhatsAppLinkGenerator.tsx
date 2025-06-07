@@ -48,7 +48,8 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          baseUrl: baseUrl.trim(),
+          linkType: 'website',
+          destinationUrl: baseUrl.trim(),
           campaignName: campaignName.trim() || 'whatsapp_campaign'
         })
       });
