@@ -95,14 +95,18 @@ const Integrations = () => {
                                             newStatus.analytics.authenticated && 
                                             newStatus.analytics.hasSelection;
 
-        // Mostrar celebração se desbloqueou (só se não estava disponível antes E se não passou do limite)
-        if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable && celebrationCount < 2) {
-          setTimeout(() => {
-            setShowCelebration('whatsapp-analytics');
-            const newCount = celebrationCount + 1;
-            setCelebrationCount(newCount);
-            localStorage.setItem('celebration-count', newCount.toString());
-          }, 1000);
+        // Mostrar celebração se desbloqueou (SEM USAR celebrationCount aqui para evitar loop)
+        if (!wasWhatsappAnalyticsAvailable && isWhatsappAnalyticsAvailable) {
+          // Verificar contador no localStorage diretamente
+          const storedCount = parseInt(localStorage.getItem('celebration-count') || '0');
+          if (storedCount < 2) {
+            setTimeout(() => {
+              setShowCelebration('whatsapp-analytics');
+              const newCount = storedCount + 1;
+              setCelebrationCount(newCount);
+              localStorage.setItem('celebration-count', newCount.toString());
+            }, 1000);
+          }
         }
 
         return newStatus;
@@ -113,7 +117,7 @@ const Integrations = () => {
     } finally {
       setLoading(false);
     }
-  }, [whatsappStatus.connected, whatsappStatus.authenticated, celebrationCount]);
+  }, [whatsappStatus.connected, whatsappStatus.authenticated]);
 
   // Carregar contador de celebrações do localStorage
   useEffect(() => {
@@ -135,10 +139,10 @@ const Integrations = () => {
         clearTimeout(debounceRef.current);
       }
       
-      // Criar novo timeout com debounce de 500ms
+      // Criar novo timeout com debounce de 1 segundo (mais conservador)
       debounceRef.current = setTimeout(() => {
         checkIntegrationsStatus();
-      }, 500);
+      }, 1000);
     }
 
     // Cleanup do timeout
@@ -147,7 +151,7 @@ const Integrations = () => {
         clearTimeout(debounceRef.current);
       }
     };
-  }, [whatsappStatus.connected, whatsappStatus.authenticated, loading, checkIntegrationsStatus]);
+  }, [whatsappStatus.connected, whatsappStatus.authenticated, loading]);
 
   const handleIntegrationClick = (integrationId: string) => {
     if (integrationId === 'facebook' || integrationId === 'instagram') {

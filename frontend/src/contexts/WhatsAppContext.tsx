@@ -53,7 +53,7 @@ export const WhatsAppProvider: React.FC<WhatsAppProviderProps> = ({ children }) 
   // Refs para controlar retry
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const autoRetryAttemptsRef = useRef(0);
-  const maxAutoRetries = 5;
+  const maxAutoRetries = 3;
   const connectionAttemptRef = useRef(false);
 
   // Limpar timeouts quando o componente desmontar
@@ -90,8 +90,10 @@ export const WhatsAppProvider: React.FC<WhatsAppProviderProps> = ({ children }) 
         setLastError(null);
         connectionAttemptRef.current = false;
         
-        // Buscar status atual quando conectar
-        fetchStatus();
+        // Buscar status atual quando conectar (com delay para evitar spam)
+        setTimeout(() => {
+          fetchStatus();
+        }, 1000);
       });
 
       newSocket.on('whatsapp-status', (status: WhatsAppStatus) => {
@@ -183,8 +185,8 @@ export const WhatsAppProvider: React.FC<WhatsAppProviderProps> = ({ children }) 
     setIsAutoRetrying(true);
     autoRetryAttemptsRef.current++;
     
-    // Delay maior e mais agressivo: 30s, 60s, 90s, 120s, 150s
-    const retryDelay = Math.min(30000 * autoRetryAttemptsRef.current, 150000);
+    // Delay muito mais conservador: 60s, 120s, 180s, 240s, 300s
+    const retryDelay = Math.min(60000 * autoRetryAttemptsRef.current, 300000);
     
     console.log(`🔄 Agendando auto-retry em ${retryDelay / 1000}s (tentativa ${autoRetryAttemptsRef.current}/${maxAutoRetries})`);
     

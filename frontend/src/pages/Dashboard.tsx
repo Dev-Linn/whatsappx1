@@ -42,21 +42,14 @@ const Dashboard = () => {
       console.log('🏠 Dashboard carregado - verificando status do WhatsApp...');
       initializationAttempted.current = true;
       
-      // Buscar status atual
+      // Apenas buscar status, SEM auto-inicializar (deixar para o usuário decidir)
       fetchStatus().then(() => {
-        // Se não está conectado e não há QR code, inicializar
-        if (!whatsappStatus.connected && !whatsappStatus.qrCode && 
-            whatsappStatus.message === 'Aguardando conexão...') {
-          console.log('🆕 Dashboard: Inicializando WhatsApp automaticamente...');
-          initializeWhatsApp().catch(error => {
-            console.error('❌ Dashboard: Erro ao inicializar WhatsApp:', error);
-          });
-        } else {
-          console.log('🔍 Dashboard: WhatsApp já inicializado ou em processo');
-        }
+        console.log('🔍 Dashboard: Status do WhatsApp verificado');
+      }).catch(error => {
+        console.error('❌ Dashboard: Erro ao verificar status WhatsApp:', error);
       });
     }
-  }, [isAuthenticated, fetchStatus]); // Removido whatsappStatus e initializeWhatsApp das dependências
+  }, [isAuthenticated]);
 
   if (loading) {
     return (
