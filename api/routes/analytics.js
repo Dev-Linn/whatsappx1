@@ -303,6 +303,104 @@ module.exports = (db) => {
         }
     });
 
+    // Obter estatísticas de tracking
+    router.get('/integration/tracking-stats', async (req, res) => {
+        try {
+            const database = req.app.locals.db;
+            
+            // Buscar todos os links criados
+            const links = await database.sequelize.query(`
+                SELECT 
+                    tracking_id,
+                    base_url,
+                    campaign_name,
+                    created_at
+                FROM whatsapp_tracking_links 
+                WHERE tenant_id = ?
+                ORDER BY created_at DESC
+            `, {
+                replacements: [req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            // Buscar todos os cliques
+            const clicks = await database.sequelize.query(`
+                SELECT 
+                    tracking_id,
+                    user_agent,
+                    ip_address,
+                    clicked_at
+                FROM whatsapp_click_tracking 
+                WHERE tenant_id = ?
+                ORDER BY clicked_at DESC
+            `, {
+                replacements: [req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            // Calcular estatísticas por link
+            const linkStats = links.map(link => {
+                const linkClicks = clicks.filter(click => click.tracking_id === link.tracking_id);
+                return {
+                    trackingId: link.tracking_id,
+                    baseUrl: link.base_url,
+                    campaignName: link.campaign_name,
+                    createdAt: link.created_at,
+                    clickCount: linkClicks.length,
+                    clicks: linkClicks
+                };
+            });
+            
+            // Estatísticas gerais
+            const totalLinks = links.length;
+            const totalClicks = clicks.length;
+            const clickRate = totalLinks > 0 ? ((totalClicks / totalLinks) * 100).toFixed(1) : '0.0';
+            
+            // Cliques por dia (últimos 7 dias)
+            const clicksByDay = {};
+            const last7Days = [];
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toISOString().split('T')[0];
+                last7Days.push(dateStr);
+                clicksByDay[dateStr] = 0;
+            }
+            
+            clicks.forEach(click => {
+                if (click.clicked_at) {
+                    const clickDate = click.clicked_at.split(' ')[0]; // YYYY-MM-DD
+                    if (clicksByDay.hasOwnProperty(clickDate)) {
+                        clicksByDay[clickDate]++;
+                    }
+                }
+            });
+            
+            const chartData = last7Days.map(date => ({
+                date,
+                clicks: clicksByDay[date]
+            }));
+            
+            res.json({
+                success: true,
+                stats: {
+                    totalLinks,
+                    totalClicks,
+                    clickRate: parseFloat(clickRate),
+                    linkStats,
+                    chartData
+                }
+            });
+            
+        } catch (error) {
+            console.error('Erro ao buscar estatísticas de tracking:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+
     // ==================== FUNÇÕES AUXILIARES ====================
     
     function generateTrackingCode(tenantId) {

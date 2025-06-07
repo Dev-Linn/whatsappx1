@@ -85,12 +85,14 @@ const Analytics = () => {
   const [showIntegrationModal, setShowIntegrationModal] = useState(false);
   const [integrationMetrics, setIntegrationMetrics] = useState(null);
   const [isIntegrationConfigured, setIsIntegrationConfigured] = useState(false);
+  const [trackingData, setTrackingData] = useState<any>(null);
   const { toast } = useToast();
 
   // Verificar status de autenticação ao carregar
   useEffect(() => {
     checkAuthStatus();
     checkIntegrationStatus();
+    loadTrackingData();
   }, []);
 
   const checkAuthStatus = async () => {
@@ -143,6 +145,25 @@ const Analytics = () => {
       }
     } catch (error) {
       console.error('Erro ao verificar integração:', error);
+    }
+  };
+
+  const loadTrackingData = async () => {
+    try {
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/api/v1/analytics/integration/tracking-stats`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setTrackingData(data);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar dados de tracking:', error);
     }
   };
 
@@ -986,6 +1007,221 @@ const Analytics = () => {
             </Card>
           </div>
         </>
+      )}
+
+      {/* Dashboard de Tracking WhatsApp */}
+      {trackingData && (
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
+            <Link2 className="h-6 w-6 mr-3 text-green-500" />
+            📊 Dashboard de Tracking WhatsApp
+            <Button 
+              onClick={loadTrackingData}
+              size="sm" 
+              variant="outline" 
+              className="ml-auto"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+          </h2>
+
+          {/* Métricas Principais de Tracking */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            <Card className="bg-gradient-to-br from-blue-800 to-blue-900 border-blue-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-blue-200 flex items-center">
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Links Criados
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-white">
+                  {trackingData.stats.totalLinks}
+                </div>
+                <div className="text-xs text-blue-300 mt-1">
+                  Links rastreados ativos
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-green-800 to-green-900 border-green-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-green-200 flex items-center">
+                  <MousePointer className="h-4 w-4 mr-2" />
+                  Total de Cliques
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-white">
+                  {trackingData.stats.totalClicks}
+                </div>
+                <div className="text-xs text-green-300 mt-1">
+                  Cliques registrados
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-purple-800 to-purple-900 border-purple-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-purple-200 flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  Taxa de Clique
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-white">
+                  {trackingData.stats.clickRate}%
+                </div>
+                <div className="text-xs text-purple-300 mt-1">
+                  CTR médio dos links
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-yellow-800 to-yellow-900 border-yellow-700">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-yellow-200 flex items-center">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Performance
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-white">
+                  {trackingData.stats.clickRate >= 50 ? 'ALTA' : 
+                   trackingData.stats.clickRate >= 20 ? 'MÉDIA' : 'BAIXA'}
+                </div>
+                <div className="text-xs text-yellow-300 mt-1">
+                  Classificação geral
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráfico de Cliques por Dia */}
+          <Card className="bg-gray-800 border-gray-700 mb-6">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <BarChart3 className="h-5 w-5 mr-2" />
+                📈 Cliques nos Últimos 7 Dias
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-7 gap-2">
+                {trackingData.stats.chartData.map((day, index) => {
+                  const maxClicks = Math.max(...trackingData.stats.chartData.map(d => d.clicks));
+                  const height = maxClicks > 0 ? (day.clicks / maxClicks) * 100 : 0;
+                  
+                  return (
+                    <div key={index} className="text-center">
+                      <div className="h-32 flex items-end justify-center mb-2">
+                        <div 
+                          className="bg-gradient-to-t from-blue-500 to-blue-400 rounded-t w-full transition-all duration-300 hover:from-blue-400 hover:to-blue-300 cursor-pointer"
+                          style={{ height: `${Math.max(height, 8)}%` }}
+                          title={`${day.clicks} cliques`}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(day.date).toLocaleDateString('pt-BR', { 
+                          day: '2-digit', 
+                          month: '2-digit' 
+                        })}
+                      </div>
+                      <div className="text-sm font-medium text-white">
+                        {day.clicks}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Lista Detalhada de Links */}
+          <Card className="bg-gray-800 border-gray-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center">
+                <Link2 className="h-5 w-5 mr-2" />
+                🔗 Links Rastreados Detalhados
+              </CardTitle>
+              <CardDescription>
+                Todos os links criados e suas estatísticas
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {trackingData.stats.linkStats.map((link, index) => (
+                  <div key={index} className="p-4 bg-gray-900 rounded-lg border border-gray-700">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Badge variant="outline" className="text-blue-400 border-blue-400">
+                            {link.campaignName}
+                          </Badge>
+                          <span className="text-xs text-gray-500">
+                            ID: {link.trackingId}
+                          </span>
+                        </div>
+                        
+                        <div className="text-white text-sm mb-1 break-all">
+                          🎯 <strong>Destino:</strong> {link.baseUrl}
+                        </div>
+                        
+                        <div className="text-gray-400 text-xs">
+                          📅 <strong>Criado:</strong> {new Date(link.createdAt).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-green-400">
+                          {link.clickCount}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {link.clickCount === 1 ? 'clique' : 'cliques'}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {link.clicks.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-700">
+                        <div className="text-xs text-gray-400 mb-2">
+                          👆 Últimos cliques:
+                        </div>
+                        <div className="space-y-1">
+                          {link.clicks.slice(0, 3).map((click, clickIndex) => (
+                            <div key={clickIndex} className="text-xs text-gray-500 flex justify-between">
+                              <span>🕐 {new Date(click.clicked_at).toLocaleString('pt-BR')}</span>
+                              <span>📍 {click.ip_address}</span>
+                            </div>
+                          ))}
+                          {link.clicks.length > 3 && (
+                            <div className="text-xs text-gray-600">
+                              + {link.clicks.length - 3} cliques anteriores...
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                {trackingData.stats.linkStats.length === 0 && (
+                  <div className="text-center py-8 text-gray-400">
+                    <Link2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nenhum link rastreado encontrado.</p>
+                    <p className="text-sm">Crie seu primeiro link usando o botão acima!</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Modal de Integração WhatsApp + Analytics */}
