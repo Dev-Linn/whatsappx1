@@ -305,95 +305,160 @@ const LinkManagement: React.FC = () => {
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {data.links.map((link) => (
-            <Card key={link.tracking_id} className="relative overflow-hidden hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
-                      🎯 {link.campaign_name}
-                    </CardTitle>
-                    <p className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                      {link.tracking_id}
-                    </p>
-                  </div>
-                  <div className="flex space-x-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setViewDialog({ open: true, link })}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setDeleteDialog({ open: true, link })}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
+              {data.links.map((link) => {
+                // Extrair informações do WhatsApp
+                const whatsappInfo = {
+                  number: link.whatsapp_number,
+                  message: decodeURIComponent(link.default_message || ''),
+                  formattedNumber: link.whatsapp_number.replace(/(\d{2})(\d{2})(\d{5})(\d{4})/, '+$1 ($2) $3-$4')
+                };
 
-              <CardContent className="space-y-4">
-                {/* Status do Lead */}
-                {link.journey.some(j => j.event_type === 'message') ? (
-                  <div className="flex items-center space-x-2 text-green-600">
-                    <CheckCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Lead Convertido</span>
-                  </div>
-                ) : link.metrics.clickCount > 0 ? (
-                  <div className="flex items-center space-x-2 text-yellow-600">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-sm font-medium">Aguardando Resposta</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2 text-gray-500">
-                    <AlertCircle className="w-4 h-4" />
-                    <span className="text-sm font-medium">Sem Interação</span>
-                  </div>
-                )}
+                // Determinar status com cores
+                const getStatusInfo = () => {
+                  if (link.metrics.correlationCount > 0) {
+                    return {
+                      icon: <CheckCircle className="w-4 h-4" />,
+                      text: 'Lead Convertido',
+                      color: 'text-green-600',
+                      bgColor: 'bg-green-50',
+                      borderColor: 'border-green-200'
+                    };
+                  } else if (link.metrics.clickCount > 0) {
+                    return {
+                      icon: <Clock className="w-4 h-4" />,
+                      text: 'Aguardando Resposta',
+                      color: 'text-yellow-600',
+                      bgColor: 'bg-yellow-50',
+                      borderColor: 'border-yellow-200'
+                    };
+                  } else {
+                    return {
+                      icon: <AlertCircle className="w-4 h-4" />,
+                      text: 'Sem Interação',
+                      color: 'text-gray-500',
+                      bgColor: 'bg-gray-50',
+                      borderColor: 'border-gray-200'
+                    };
+                  }
+                };
 
-                {/* Métricas Rápidas */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500">Cliques</p>
-                    <p className="font-bold text-lg">{link.metrics.clickCount}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500">Conversões</p>
-                    <p className="font-bold text-lg">{link.metrics.correlationCount}</p>
-                  </div>
-                </div>
+                const status = getStatusInfo();
 
-                {/* Taxa de Conversão */}
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Taxa de conversão:</span>
-                  {getConversionBadge(link.metrics.conversionRate)}
-                </div>
-
-                {/* Tempo de Resposta */}
-                {link.metrics.averageResponseTime && (
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Tempo de resposta:</span>
-                    <div className="flex items-center space-x-1">
-                      <TrendingUp className="w-3 h-3 text-green-600" />
-                      <span className="font-medium">
-                        {formatResponseTime(link.metrics.averageResponseTime)}
-                      </span>
+                return (
+                  <Card key={link.tracking_id} className={`relative overflow-hidden hover:shadow-xl transition-all duration-300 ${status.borderColor} border-2`}>
+                    {/* Header com gradiente */}
+                    <div className={`${status.bgColor} px-6 py-4 border-b ${status.borderColor}`}>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="text-2xl">🎯</div>
+                            <CardTitle className="text-lg font-bold text-gray-900">
+                              {link.campaign_name}
+                            </CardTitle>
+                          </div>
+                          
+                          {/* Número do WhatsApp */}
+                          <div className="flex items-center space-x-2 text-sm text-gray-600">
+                            <Phone className="w-4 h-4 text-green-600" />
+                            <span className="font-mono">{whatsappInfo.formattedNumber}</span>
+                          </div>
+                          
+                          {/* Mensagem padrão */}
+                          {whatsappInfo.message && (
+                            <div className="mt-2 p-2 bg-white rounded-lg border shadow-sm">
+                              <div className="flex items-center space-x-2 mb-1">
+                                <MessageCircle className="w-3 h-3 text-green-600" />
+                                <span className="text-xs font-medium text-gray-600">Mensagem Padrão:</span>
+                              </div>
+                              <p className="text-sm text-gray-800 italic">"{whatsappInfo.message}"</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex space-x-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setViewDialog({ open: true, link })}
+                            className="hover:bg-white/50"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setDeleteDialog({ open: true, link })}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                {/* Data de Criação */}
-                <div className="text-xs text-gray-500 pt-2 border-t">
-                  Criado em {formatDate(link.created_at)}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    <CardContent className="p-6 space-y-4">
+                      {/* Status Principal */}
+                      <div className={`flex items-center space-x-2 ${status.color} p-3 rounded-lg ${status.bgColor} border ${status.borderColor}`}>
+                        {status.icon}
+                        <span className="font-semibold">{status.text}</span>
+                        {link.metrics.correlationCount > 0 && (
+                          <Badge className="ml-auto bg-green-100 text-green-800 border-green-200">
+                            {link.metrics.correlationCount} conversão(ões)
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Métricas Destacadas */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-2xl font-bold text-blue-700">{link.metrics.clickCount}</div>
+                          <div className="text-xs text-blue-600 font-medium">Cliques Únicos</div>
+                        </div>
+                        <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="text-2xl font-bold text-purple-700">{link.metrics.correlationCount}</div>
+                          <div className="text-xs text-purple-600 font-medium">Conversões</div>
+                        </div>
+                      </div>
+
+                      {/* Taxa de Conversão Destacada */}
+                      <div className="text-center p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-center space-x-2 mb-1">
+                          <TrendingUp className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-gray-700">Taxa de Conversão</span>
+                        </div>
+                        <div className="text-2xl font-bold text-green-700">{link.metrics.conversionRate}%</div>
+                        {getConversionBadge(link.metrics.conversionRate)}
+                      </div>
+
+                      {/* Informações Técnicas */}
+                      <div className="pt-3 border-t border-gray-200 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">ID do Link:</span>
+                          <code className="bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">
+                            {link.tracking_id.split('_').pop()}
+                          </code>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-500">Criado em:</span>
+                          <span className="font-medium text-gray-700">
+                            {formatDate(link.created_at)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Link de Ação */}
+                      <Button 
+                        onClick={() => window.open(link.base_url, '_blank')} 
+                        className="w-full bg-green-600 hover:bg-green-700 text-white"
+                        size="sm"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Testar Link
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </>
