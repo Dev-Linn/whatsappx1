@@ -63,7 +63,7 @@ const IntegrationSetupModal = ({ isOpen, onClose, onComplete }: IntegrationSetup
     setIsLoading(true);
     
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('whatsapp_bot_token');
       const response = await fetch('/api/v1/analytics/integration/setup', {
         method: 'POST',
         headers: {

@@ -40,7 +40,7 @@ const WhatsAppLinkGenerator = ({ isIntegrationConfigured }: WhatsAppLinkGenerato
     setIsLoading(true);
     
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('whatsapp_bot_token');
       const response = await fetch('/api/v1/analytics/integration/generate-link', {
         method: 'POST',
         headers: {
