@@ -1,0 +1,423 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { 
+  Trash2, 
+  Eye, 
+  ExternalLink, 
+  Clock, 
+  Phone, 
+  MessageCircle,
+  TrendingUp,
+  MapPin,
+  Smartphone,
+  CheckCircle,
+  AlertCircle
+} from 'lucide-react';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface LinkData {
+  id: number;
+  tracking_id: string;
+  campaign_name: string;
+  base_url: string;
+  link_type: string;
+  whatsapp_number: string;
+  default_message: string;
+  created_at: string;
+  journey: Array<{
+    event_type: 'click' | 'message';
+    timestamp: string;
+    user_agent?: string;
+    ip_address?: string;
+    message_content?: string;
+    phone_number?: string;
+  }>;
+  metrics: {
+    clickCount: number;
+    correlationCount: number;
+    conversionRate: string;
+    averageResponseTime: number | null;
+  };
+}
+
+const LinkManagement: React.FC = () => {
+  const [links, setLinks] = useState<LinkData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; link: LinkData | null }>({
+    open: false,
+    link: null
+  });
+  const [viewDialog, setViewDialog] = useState<{ open: boolean; link: LinkData | null }>({
+    open: false,
+    link: null
+  });
+
+  const fetchLinks = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('whatsapp_bot_token');
+      
+      const response = await fetch('/api/v1/analytics/links/manage', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLinks(data.data || []);
+      } else {
+        console.error('Erro ao carregar links');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteLink = async (trackingId: string) => {
+    try {
+      const token = localStorage.getItem('whatsapp_bot_token');
+      
+      const response = await fetch(`/api/v1/analytics/links/${trackingId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        setLinks(links.filter(link => link.tracking_id !== trackingId));
+        setDeleteDialog({ open: false, link: null });
+      } else {
+        console.error('Erro ao deletar link');
+      }
+    } catch (error) {
+      console.error('Erro:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLinks();
+  }, []);
+
+  const formatDate = (dateString: string) => {
+    return format(new Date(dateString), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+  };
+
+  const getConversionBadge = (rate: string) => {
+    const rateNum = parseFloat(rate);
+    if (rateNum >= 50) return <Badge className="bg-green-500">Alta conversão</Badge>;
+    if (rateNum >= 20) return <Badge className="bg-yellow-500">Média conversão</Badge>;
+    return <Badge variant="secondary">Baixa conversão</Badge>;
+  };
+
+  const formatResponseTime = (seconds: number | null) => {
+    if (!seconds) return 'N/A';
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
+    return `${Math.floor(seconds / 3600)}h`;
+  };
+
+  const JourneyTimeline = ({ journey }: { journey: LinkData['journey'] }) => {
+    return (
+      <div className="space-y-4">
+        {journey.map((event, index) => (
+          <div key={index} className="flex items-start space-x-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+              event.event_type === 'click' 
+                ? 'bg-blue-100 text-blue-600' 
+                : 'bg-green-100 text-green-600'
+            }`}>
+              {event.event_type === 'click' ? (
+                <ExternalLink className="w-4 h-4" />
+              ) : (
+                <MessageCircle className="w-4 h-4" />
+              )}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium">
+                  {event.event_type === 'click' ? 'Clique no Link' : 'Mensagem Enviada'}
+                </h4>
+                <span className="text-sm text-gray-500">
+                  {format(new Date(event.timestamp), 'HH:mm:ss', { locale: ptBR })}
+                </span>
+              </div>
+              <div className="text-sm text-gray-600 mt-1">
+                {event.event_type === 'click' ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <MapPin className="w-3 h-3" />
+                      <span>IP: {event.ip_address}</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Smartphone className="w-3 h-3" />
+                      <span className="truncate">
+                        {event.user_agent?.includes('Mobile') ? 'Mobile' : 'Desktop'}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <div className="flex items-center space-x-2">
+                      <Phone className="w-3 h-3" />
+                      <span>{event.phone_number}</span>
+                    </div>
+                    <div className="bg-gray-50 p-2 rounded text-xs">
+                      "{event.message_content}"
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Gerenciar Links</h2>
+        <Button onClick={fetchLinks} variant="outline">
+          Atualizar
+        </Button>
+      </div>
+
+      {links.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="w-12 h-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum link criado</h3>
+            <p className="text-gray-500 text-center">
+              Crie seu primeiro link de tracking na aba "Analytics"
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {links.map((link) => (
+            <Card key={link.tracking_id} className="relative overflow-hidden hover:shadow-lg transition-shadow">
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-semibold text-gray-900 mb-1">
+                      🎯 {link.campaign_name}
+                    </CardTitle>
+                    <p className="text-xs font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                      {link.tracking_id}
+                    </p>
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setViewDialog({ open: true, link })}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setDeleteDialog({ open: true, link })}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Status do Lead */}
+                {link.journey.some(j => j.event_type === 'message') ? (
+                  <div className="flex items-center space-x-2 text-green-600">
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Lead Convertido</span>
+                  </div>
+                ) : link.metrics.clickCount > 0 ? (
+                  <div className="flex items-center space-x-2 text-yellow-600">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-sm font-medium">Aguardando Resposta</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2 text-gray-500">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Sem Interação</span>
+                  </div>
+                )}
+
+                {/* Métricas Rápidas */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500">Cliques</p>
+                    <p className="font-bold text-lg">{link.metrics.clickCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Conversões</p>
+                    <p className="font-bold text-lg">{link.metrics.correlationCount}</p>
+                  </div>
+                </div>
+
+                {/* Taxa de Conversão */}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-500">Taxa de conversão:</span>
+                  {getConversionBadge(link.metrics.conversionRate)}
+                </div>
+
+                {/* Tempo de Resposta */}
+                {link.metrics.averageResponseTime && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-500">Tempo de resposta:</span>
+                    <div className="flex items-center space-x-1">
+                      <TrendingUp className="w-3 h-3 text-green-600" />
+                      <span className="font-medium">
+                        {formatResponseTime(link.metrics.averageResponseTime)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Data de Criação */}
+                <div className="text-xs text-gray-500 pt-2 border-t">
+                  Criado em {formatDate(link.created_at)}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Dialog de Confirmação de Delete */}
+      <Dialog open={deleteDialog.open} onOpenChange={(open) => 
+        setDeleteDialog({ open, link: open ? deleteDialog.link : null })
+      }>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o link da campanha "{deleteDialog.link?.campaign_name}"?
+              <br />
+              <strong>Esta ação não pode ser desfeita.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialog({ open: false, link: null })}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deleteDialog.link && deleteLink(deleteDialog.link.tracking_id)}
+            >
+              Excluir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Visualização da Jornada */}
+      <Dialog open={viewDialog.open} onOpenChange={(open) => 
+        setViewDialog({ open, link: open ? viewDialog.link : null })
+      }>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>🎯 {viewDialog.link?.campaign_name}</DialogTitle>
+            <DialogDescription>
+              Jornada completa do cliente para este link de tracking
+            </DialogDescription>
+          </DialogHeader>
+          
+          {viewDialog.link && (
+            <div className="space-y-6">
+              {/* Métricas Resumo */}
+              <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-blue-600">{viewDialog.link.metrics.clickCount}</p>
+                  <p className="text-sm text-gray-600">Cliques</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-green-600">{viewDialog.link.metrics.correlationCount}</p>
+                  <p className="text-sm text-gray-600">Conversões</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-2xl font-bold text-purple-600">{viewDialog.link.metrics.conversionRate}%</p>
+                  <p className="text-sm text-gray-600">Taxa</p>
+                </div>
+              </div>
+
+              {/* Timeline da Jornada */}
+              <div>
+                <h4 className="font-semibold mb-4">📊 Jornada do Cliente</h4>
+                {viewDialog.link.journey.length > 0 ? (
+                  <JourneyTimeline journey={viewDialog.link.journey} />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                    <p>Nenhuma interação registrada ainda</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Detalhes Técnicos */}
+              <div className="border-t pt-4">
+                <h4 className="font-semibold mb-2">🔧 Detalhes Técnicos</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tracking ID:</span>
+                    <code className="bg-gray-100 px-2 py-1 rounded text-xs">
+                      {viewDialog.link.tracking_id}
+                    </code>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tipo:</span>
+                    <span>{viewDialog.link.link_type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">WhatsApp:</span>
+                    <span>{viewDialog.link.whatsapp_number}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Criado em:</span>
+                    <span>{formatDate(viewDialog.link.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default LinkManagement; 

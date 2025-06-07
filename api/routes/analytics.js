@@ -684,6 +684,183 @@ module.exports = (db) => {
         }
     });
 
+    // 📋 Listar todos os links com jornada completa
+    router.get('/links/manage', async (req, res) => {
+        try {
+            const database = req.app.locals.db;
+            
+            console.log('📋 [MANAGE LINKS] Buscando links para tenant:', req.tenant.id);
+            
+            // Buscar todos os links do tenant
+            const links = await database.sequelize.query(`
+                SELECT 
+                    wtl.id,
+                    wtl.tracking_id,
+                    wtl.campaign_name,
+                    wtl.base_url,
+                    wtl.link_type,
+                    wtl.whatsapp_number,
+                    wtl.default_message,
+                    wtl.created_at,
+                    COUNT(DISTINCT wct.id) as total_clicks,
+                    COUNT(DISTINCT wmc.id) as total_correlations,
+                    GROUP_CONCAT(wmc.phone_number) as correlated_numbers
+                FROM whatsapp_tracking_links wtl
+                LEFT JOIN whatsapp_click_tracking wct ON wtl.tracking_id = wct.tracking_id
+                LEFT JOIN whatsapp_message_correlation wmc ON wtl.tracking_id = wmc.tracking_id
+                WHERE wtl.tenant_id = ?
+                GROUP BY wtl.id
+                ORDER BY wtl.created_at DESC
+            `, {
+                replacements: [req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            // Para cada link, buscar detalhes da jornada
+            const enrichedLinks = await Promise.all(links.map(async (link) => {
+                // Buscar jornada completa
+                const journey = await database.sequelize.query(`
+                    SELECT 
+                        'click' as event_type,
+                        wct.clicked_at as timestamp,
+                        wct.user_agent,
+                        wct.ip_address,
+                        null as message_content,
+                        null as phone_number
+                    FROM whatsapp_click_tracking wct
+                    WHERE wct.tracking_id = ? AND wct.tenant_id = ?
+                    
+                    UNION ALL
+                    
+                    SELECT 
+                        'message' as event_type,
+                        wmc.correlated_at as timestamp,
+                        null as user_agent,
+                        null as ip_address,
+                        wmc.message_content,
+                        wmc.phone_number
+                    FROM whatsapp_message_correlation wmc
+                    WHERE wmc.tracking_id = ? AND wmc.tenant_id = ?
+                    
+                    ORDER BY timestamp ASC
+                `, {
+                    replacements: [link.tracking_id, req.tenant.id, link.tracking_id, req.tenant.id],
+                    type: database.sequelize.QueryTypes.SELECT
+                });
+                
+                // Calcular métricas
+                const metrics = {
+                    clickCount: link.total_clicks || 0,
+                    correlationCount: link.total_correlations || 0,
+                    conversionRate: link.total_clicks > 0 ? ((link.total_correlations / link.total_clicks) * 100).toFixed(1) : '0.0',
+                    averageResponseTime: null
+                };
+                
+                // Calcular tempo médio de resposta se houver correlações
+                if (journey.length > 1) {
+                    const clickEvent = journey.find(j => j.event_type === 'click');
+                    const messageEvent = journey.find(j => j.event_type === 'message');
+                    
+                    if (clickEvent && messageEvent) {
+                        const clickTime = new Date(clickEvent.timestamp);
+                        const messageTime = new Date(messageEvent.timestamp);
+                        const responseTimeSeconds = Math.floor((messageTime - clickTime) / 1000);
+                        metrics.averageResponseTime = responseTimeSeconds;
+                    }
+                }
+                
+                return {
+                    ...link,
+                    journey: journey,
+                    metrics: metrics
+                };
+            }));
+            
+            console.log(`📋 [MANAGE LINKS] Encontrados ${enrichedLinks.length} links`);
+            
+            res.json({
+                success: true,
+                data: enrichedLinks
+            });
+            
+        } catch (error) {
+            console.error('❌ [MANAGE LINKS] Erro ao buscar links:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+    
+    // 🗑️ Deletar link de tracking
+    router.delete('/links/:trackingId', async (req, res) => {
+        try {
+            const { trackingId } = req.params;
+            const database = req.app.locals.db;
+            
+            console.log(`🗑️ [DELETE LINK] Deletando ${trackingId} para tenant ${req.tenant.id}`);
+            
+            // Verificar se o link pertence ao tenant
+            const linkCheck = await database.sequelize.query(`
+                SELECT id FROM whatsapp_tracking_links 
+                WHERE tracking_id = ? AND tenant_id = ?
+            `, {
+                replacements: [trackingId, req.tenant.id],
+                type: database.sequelize.QueryTypes.SELECT
+            });
+            
+            if (linkCheck.length === 0) {
+                return res.status(404).json({
+                    error: 'Link não encontrado'
+                });
+            }
+            
+            // Deletar em cascata (tracking link, cliques, correlações)
+            await database.sequelize.transaction(async (t) => {
+                // Deletar correlações
+                await database.sequelize.query(`
+                    DELETE FROM whatsapp_message_correlation 
+                    WHERE tracking_id = ? AND tenant_id = ?
+                `, {
+                    replacements: [trackingId, req.tenant.id],
+                    transaction: t
+                });
+                
+                // Deletar cliques
+                await database.sequelize.query(`
+                    DELETE FROM whatsapp_click_tracking 
+                    WHERE tracking_id = ? AND tenant_id = ?
+                `, {
+                    replacements: [trackingId, req.tenant.id],
+                    transaction: t
+                });
+                
+                // Deletar link
+                await database.sequelize.query(`
+                    DELETE FROM whatsapp_tracking_links 
+                    WHERE tracking_id = ? AND tenant_id = ?
+                `, {
+                    replacements: [trackingId, req.tenant.id],
+                    transaction: t
+                });
+            });
+            
+            console.log(`✅ [DELETE LINK] Link ${trackingId} deletado com sucesso`);
+            
+            res.json({
+                success: true,
+                message: 'Link deletado com sucesso'
+            });
+            
+        } catch (error) {
+            console.error('❌ [DELETE LINK] Erro ao deletar link:', error);
+            res.status(500).json({
+                error: 'Erro interno do servidor',
+                message: error.message
+            });
+        }
+    });
+
     // Obter estatísticas de tracking
     router.get('/integration/tracking-stats', async (req, res) => {
         try {

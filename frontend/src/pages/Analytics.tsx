@@ -8,6 +8,7 @@ import { getToken } from "@/lib/auth";
 import { API_ENDPOINTS, API_BASE_URL } from "@/lib/config";
 import IntegrationSetupModal from "@/components/IntegrationSetupModal";
 import WhatsAppLinkGenerator from "@/components/WhatsAppLinkGenerator";
+import LinkManagement from "@/components/LinkManagement";
 import { 
   BarChart3, 
   TrendingUp, 
@@ -25,7 +26,9 @@ import {
   Tablet,
   Link2,
   MessageSquare,
-  Rocket
+  Rocket,
+  Settings,
+  Eye
 } from "lucide-react";
 
 interface AnalyticsData {
@@ -86,6 +89,7 @@ const Analytics = () => {
   const [integrationMetrics, setIntegrationMetrics] = useState(null);
   const [isIntegrationConfigured, setIsIntegrationConfigured] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generator' | 'management'>('dashboard');
   const { toast } = useToast();
 
   // Verificar status de autenticação ao carregar
@@ -699,7 +703,6 @@ const Analytics = () => {
               Integrar WhatsApp
             </Button>
           )}
-          <WhatsAppLinkGenerator isIntegrationConfigured={isIntegrationConfigured} />
           <Button 
             onClick={loadDashboardData}
             disabled={loading}
@@ -719,6 +722,52 @@ const Analytics = () => {
           </Button>
         </div>
       </div>
+
+      {/* Navegação por Abas */}
+      <div className="mb-8">
+        <div className="flex flex-wrap justify-center gap-2 mb-6">
+          <Button
+            variant={activeTab === 'dashboard' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('dashboard')}
+            className="flex items-center gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Dashboard
+          </Button>
+          <Button
+            variant={activeTab === 'generator' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('generator')}
+            className="flex items-center gap-2"
+          >
+            <Rocket className="h-4 w-4" />
+            Gerar Links
+          </Button>
+          <Button
+            variant={activeTab === 'management' ? 'default' : 'outline'}
+            onClick={() => setActiveTab('management')}
+            className="flex items-center gap-2"
+          >
+            <Settings className="h-4 w-4" />
+            Gerenciar Links
+          </Button>
+        </div>
+      </div>
+
+      {/* Conteúdo das Abas */}
+      {activeTab === 'generator' && (
+        <div className="mb-8">
+          <WhatsAppLinkGenerator isIntegrationConfigured={isIntegrationConfigured} />
+        </div>
+      )}
+
+      {activeTab === 'management' && (
+        <div className="mb-8">
+          <LinkManagement />
+        </div>
+      )}
+
+      {activeTab === 'dashboard' && (
+        <div>
 
       {analyticsData.length === 0 ? (
         <div className="space-y-6">
@@ -1221,6 +1270,9 @@ const Analytics = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
         </div>
       )}
 
