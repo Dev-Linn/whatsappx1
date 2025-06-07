@@ -85,6 +85,7 @@ const Integrations = () => {
       console.log('📡 Full WhatsApp Status:', whatsappStatus);
       
       // Verificar status Analytics  
+      console.log('🔍 [DEBUG] Fazendo chamada para Analytics Status:', API_ENDPOINTS.ANALYTICS_STATUS);
       const analyticsResponse = await fetch(API_ENDPOINTS.ANALYTICS_STATUS, {
         headers: { 
           'Authorization': `Bearer ${token}`,
@@ -95,16 +96,26 @@ const Integrations = () => {
       let analyticsStatus = { authenticated: false, hasSelection: false };
 
       if (analyticsResponse.ok) {
-        analyticsStatus = await analyticsResponse.json();
-        console.log('✅ Analytics Status:', analyticsStatus);
+        const rawResponse = await analyticsResponse.json();
+        console.log('🔍 [DEBUG] Analytics Raw Response:', rawResponse);
+        
+        // Verificar se a resposta tem os campos corretos
+        analyticsStatus = {
+          authenticated: !!rawResponse.authenticated,
+          hasSelection: !!rawResponse.hasSelection
+        };
+        console.log('✅ Analytics Status Processed:', analyticsStatus);
       } else {
         console.log('❌ Analytics Status Error:', analyticsResponse.status);
+        console.log('❌ Analytics Status Text:', await analyticsResponse.text());
       }
 
       const newStatus = {
         whatsapp: currentWhatsAppStatus,
         analytics: analyticsStatus
       };
+
+      console.log('🔍 [DEBUG] Final Integration Status:', newStatus);
 
       // Verificar se desbloqueou nova integração cruzada
       const wasWhatsappAnalyticsAvailable = integrationStatus.whatsapp.connected && 
@@ -116,6 +127,13 @@ const Integrations = () => {
                                           newStatus.whatsapp.authenticated && 
                                           newStatus.analytics.authenticated && 
                                           newStatus.analytics.hasSelection;
+
+      console.log('🔍 [DEBUG] Cross Integration Check:', {
+        wasAvailable: wasWhatsappAnalyticsAvailable,
+        isAvailable: isWhatsappAnalyticsAvailable,
+        whatsappOk: newStatus.whatsapp.connected && newStatus.whatsapp.authenticated,
+        analyticsOk: newStatus.analytics.authenticated && newStatus.analytics.hasSelection
+      });
 
       setIntegrationStatus(newStatus);
 
