@@ -39,12 +39,9 @@ async function resetEverything() {
             }
         }
         
-        console.log(`\n🔢 TOTAL DE REGISTROS: ${totalRecords}`);
+        console.log(`\n🔢 TOTAL NO WHATSAPP.DB: ${totalRecords}`);
         
-        if (totalRecords === 0) {
-            console.log('\n✅ Banco já está completamente vazio!');
-            return;
-        }
+        // SEMPRE verificar o chatbot.db também, mesmo se whatsapp.db estiver vazio
 
         console.log('\n🧹 LIMPANDO TUDO COM FORÇA...');
         
